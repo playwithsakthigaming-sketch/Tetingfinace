@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-bg-deep: #050811;
+    --color-bg-card: #0c1322;
+    --color-bg-card-hover: #111a2e;
+    --color-neon-cyan: #06b6d4;
+    --color-neon-purple: #a855f7;
+    --color-neon-blue: #3b82f6;
+  }
+
+  body {
+    background-color: #050811;
+    color: #e2e8f0;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .font-display {
+    font-family: 'Outfit', sans-serif;
+  }
+
+  .font-tabular {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Dark Neon Saraswati Glowing Utilities */
+.neon-glow-cyan {
+  box-shadow: 0 0 20px -3px rgba(6, 182, 212, 0.25), inset 0 0 12px -3px rgba(6, 182, 212, 0.1);
+}
+
+.neon-glow-purple {
+  box-shadow: 0 0 20px -3px rgba(168, 85, 247, 0.25), inset 0 0 12px -3px rgba(168, 85, 247, 0.1);
+}
+
+.neon-glow-blue {
+  box-shadow: 0 0 20px -3px rgba(59, 130, 246, 0.25), inset 0 0 12px -3px rgba(59, 130, 246, 0.1);
+}
+
+.neon-glow-amber {
+  box-shadow: 0 0 20px -3px rgba(245, 158, 11, 0.25), inset 0 0 12px -3px rgba(245, 158, 11, 0.1);
+}
+
+.neon-border-subtle {
+  border: 1px solid rgba(6, 182, 212, 0.2);
+}
+
+.neon-card {
+  background: linear-gradient(135deg, rgba(12, 19, 34, 0.95) 0%, rgba(17, 26, 46, 0.85) 100%);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.neon-card:hover {
+  border-color: rgba(6, 182, 212, 0.4);
+  box-shadow: 0 0 24px -5px rgba(6, 182, 212, 0.2);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #070c18;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #06b6d4;
+}
+
+/* Print Styles for Receipts */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-receipt-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 480px !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: 1px solid #000000 !important;
+  }
+}

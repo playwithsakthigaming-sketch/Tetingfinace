@@ -1,0 +1,6 @@
+{
+  "name": "Sri Sennamal Finance",
+  "description": "Complete weekly loan collection and finance management platform with automated penalties, customer passbook, and dark neon theme for Sri Sennamal Finance, Coimbatore.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
