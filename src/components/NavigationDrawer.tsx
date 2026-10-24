@@ -27,6 +27,7 @@ interface NavigationDrawerProps {
   onSelectTab: (tab: string) => void;
   ownerEmail: string | null;
   onOpenClearData?: () => void;
+  onLogout?: () => void;
 }
 
 export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
@@ -36,6 +37,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
   onSelectTab,
   ownerEmail,
   onOpenClearData,
+  onLogout,
 }) => {
   if (!isOpen) return null;
 
@@ -128,13 +130,28 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
           </div>
         </div>
 
-        {/* Footer info */}
-        <div className="pt-4 border-t border-slate-800/80 text-[11px] text-slate-400 flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <Lock className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="truncate max-w-[150px]">{ownerEmail || 'Owner Active'}</span>
+        {/* Footer info & Logout */}
+        <div className="pt-3 border-t border-slate-800/80 space-y-2">
+          {onLogout && (
+            <button
+              onClick={() => {
+                onClose();
+                onLogout();
+              }}
+              className="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 flex items-center justify-center gap-2 text-xs font-semibold transition-colors"
+            >
+              <Lock className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Sign Out of Owner Portal</span>
+            </button>
+          )}
+
+          <div className="text-[11px] text-slate-400 flex items-center justify-between pt-1">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span className="truncate max-w-[150px] font-mono text-[10px]">{ownerEmail || 'Owner Active'}</span>
+            </div>
+            <span className="text-[10px] text-slate-500 font-mono">v1.0-TN</span>
           </div>
-          <span className="text-[10px] text-slate-500 font-mono">v1.0-TN</span>
         </div>
       </div>
     </div>

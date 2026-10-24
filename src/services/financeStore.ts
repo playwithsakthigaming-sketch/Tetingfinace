@@ -426,6 +426,9 @@ class FinanceStore {
   }
 
   private loadInitialState(): FinanceState {
+    const savedSession = typeof window !== 'undefined' ? localStorage.getItem('sri_sennamal_auth_session') : null;
+    const initialEmail = savedSession || null;
+
     try {
       const isExplicitlyCleared = localStorage.getItem(STORAGE_CLEARED_FLAG) === 'true';
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -442,7 +445,7 @@ class FinanceStore {
           ledger: parsed.ledger || [],
           tokens: parsed.tokens || [],
           autoSaveStatus: 'saved',
-          currentUserEmail: DESIGNATED_OWNER_EMAIL,
+          currentUserEmail: initialEmail,
         };
       }
 
@@ -462,13 +465,13 @@ class FinanceStore {
               action: 'Slate Cleared',
               timestamp: new Date().toISOString(),
               details: 'Fresh clean slate ready for production data.',
-              userEmail: DESIGNATED_OWNER_EMAIL,
+              userEmail: initialEmail || DESIGNATED_OWNER_EMAIL,
             },
           ],
           recoveryPoints: [],
           autoSaveStatus: 'saved',
           lastSavedAt: new Date().toISOString(),
-          currentUserEmail: DESIGNATED_OWNER_EMAIL,
+          currentUserEmail: initialEmail,
         };
       }
     } catch (e) {
@@ -490,13 +493,13 @@ class FinanceStore {
           action: 'System Initialized',
           timestamp: new Date().toISOString(),
           details: 'Sri Sennamal Finance core ledger started.',
-          userEmail: DESIGNATED_OWNER_EMAIL,
+          userEmail: initialEmail || DESIGNATED_OWNER_EMAIL,
         },
       ],
       recoveryPoints: [],
       autoSaveStatus: 'saved',
       lastSavedAt: new Date().toISOString(),
-      currentUserEmail: DESIGNATED_OWNER_EMAIL,
+      currentUserEmail: initialEmail,
     };
   }
 
@@ -1285,6 +1288,13 @@ class FinanceStore {
 
   public setOwnerSession(email: string | null) {
     this.state.currentUserEmail = email;
+    if (typeof window !== 'undefined') {
+      if (email) {
+        localStorage.setItem('sri_sennamal_auth_session', email);
+      } else {
+        localStorage.removeItem('sri_sennamal_auth_session');
+      }
+    }
     this.notify();
   }
 }

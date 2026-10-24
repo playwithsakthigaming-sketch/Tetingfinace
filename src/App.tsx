@@ -17,6 +17,7 @@ import { AutoSaveRestoreView } from './components/AutoSaveRestoreView';
 import { SettingsView } from './components/SettingsView';
 import { AutomatedTestsView } from './components/AutomatedTestsView';
 import { OwnerLoginModal } from './components/OwnerLoginModal';
+import { LoginPage } from './components/LoginPage';
 import { ReceiptModal } from './components/ReceiptModal';
 import { PaymentCollectionModal } from './components/PaymentCollectionModal';
 import { ClearDataModal } from './components/ClearDataModal';
@@ -25,7 +26,7 @@ import { BottomNav } from './components/BottomNav';
 import { CustomerPassbookView } from './components/CustomerPassbookView';
 import { financeStore } from './services/financeStore';
 import { Customer, Loan, Payment, PassbookData } from './types/finance';
-import { DESIGNATED_OWNER_EMAIL } from './services/supabase';
+import { DESIGNATED_OWNER_EMAIL, getSupabaseClient, isAuthorizedOwner } from './services/supabase';
 import { formatCoveredWeeksSummary } from './utils/financeCalculations';
 
 export default function App() {
@@ -54,6 +55,46 @@ export default function App() {
     });
     return unsubscribe;
   }, []);
+
+  // Listen to Supabase Auth state changes
+  useEffect(() => {
+    let isMounted = true;
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    client.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return;
+      if (session?.user?.email && isAuthorizedOwner(session.user.email)) {
+        financeStore.setOwnerSession(session.user.email);
+      }
+    }).catch((err) => {
+      console.warn('Error fetching Supabase session:', err);
+    });
+
+    const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) return;
+      if (session?.user?.email && isAuthorizedOwner(session.user.email)) {
+        financeStore.setOwnerSession(session.user.email);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription?.unsubscribe();
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        await client.auth.signOut();
+      } catch (err) {
+        console.warn('Supabase sign out error:', err);
+      }
+    }
+    financeStore.setOwnerSession(null);
+  };
 
   // Inspect URL for public customer passbook token (?track=TOKEN or #track=TOKEN)
   useEffect(() => {
@@ -133,6 +174,17 @@ export default function App() {
     );
   }
 
+  // FIRST: If owner is not logged in, show dedicated Supabase Login Page first!
+  if (!storeState.currentUserEmail) {
+    return (
+      <LoginPage
+        onLoginSuccess={(email) => {
+          financeStore.setOwnerSession(email);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#050811] text-slate-100 relative overflow-x-hidden">
       
@@ -164,7 +216,7 @@ export default function App() {
           autoSaveStatus={storeState.autoSaveStatus}
           ownerEmail={storeState.currentUserEmail}
           onOpenLogin={() => setIsLoginOpen(true)}
-          onLogout={() => financeStore.setOwnerSession(null)}
+          onLogout={handleLogout}
           onOpenNewCollection={() => setIsPaymentModalOpen(true)}
           onToggleSidebar={() => setIsSidebarOpen(true)}
         />
@@ -403,6 +455,7 @@ export default function App() {
           onSelectTab={setCurrentTab}
           ownerEmail={storeState.currentUserEmail}
           onOpenClearData={() => setIsClearDataOpen(true)}
+          onLogout={handleLogout}
         />
 
       </div>
