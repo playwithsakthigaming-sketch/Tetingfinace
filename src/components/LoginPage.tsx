@@ -26,9 +26,10 @@ import {
 
 interface LoginPageProps {
   onLoginSuccess: (email: string) => void;
+  onOpenResetPage?: () => void;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenResetPage }) => {
   // Auth state: strictly sign in or forgot password
   const [activeTab, setActiveTab] = useState<'signin' | 'forgot'>('signin');
   const [email, setEmail] = useState<string>(DESIGNATED_OWNER_EMAIL);
@@ -131,13 +132,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     const client = getSupabaseClient();
 
     try {
+      const redirectUrl = `${window.location.origin}/#reset-password`;
       if (client && supabaseConfig.isConfigured) {
-        const { error } = await client.auth.resetPasswordForEmail(cleanEmail);
+        const { error } = await client.auth.resetPasswordForEmail(cleanEmail, {
+          redirectTo: redirectUrl,
+        });
         if (error) throw error;
       } else {
         await new Promise((r) => setTimeout(r, 400));
       }
-      setSuccessMessage(`Password recovery email dispatched to ${cleanEmail}. Check inbox.`);
+      setSuccessMessage(`Supabase password reset link dispatched to ${cleanEmail}! Check your inbox to reset credentials.`);
     } catch (err: any) {
       setErrorMessage(err?.message || 'Failed to dispatch recovery email.');
     } finally {
@@ -383,9 +387,26 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-2/3 py-2.5 px-3 font-bold text-black bg-cyan-400 hover:bg-cyan-300 rounded-xl shadow"
+                  className="w-2/3 py-2.5 px-3 font-bold text-black bg-cyan-400 hover:bg-cyan-300 rounded-xl shadow cursor-pointer"
                 >
-                  {isLoading ? 'Dispatching...' : 'Send Recovery Email'}
+                  {isLoading ? 'Dispatching...' : 'Send Reset Link'}
+                </button>
+              </div>
+
+              {/* Direct link to Set New Password screen */}
+              <div className="pt-3 border-t border-slate-800/80 text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onOpenResetPage) {
+                      onOpenResetPage();
+                    } else {
+                      window.location.hash = 'reset-password';
+                    }
+                  }}
+                  className="text-cyan-400 hover:text-cyan-300 hover:underline text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Already received link? Open Reset Password Page →</span>
                 </button>
               </div>
             </form>

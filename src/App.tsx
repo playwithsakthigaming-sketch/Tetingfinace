@@ -18,6 +18,7 @@ import { SettingsView } from './components/SettingsView';
 import { AutomatedTestsView } from './components/AutomatedTestsView';
 import { OwnerLoginModal } from './components/OwnerLoginModal';
 import { LoginPage } from './components/LoginPage';
+import { ResetPasswordPage } from './components/ResetPasswordPage';
 import { ReceiptModal } from './components/ReceiptModal';
 import { PaymentCollectionModal } from './components/PaymentCollectionModal';
 import { ClearDataModal } from './components/ClearDataModal';
@@ -38,6 +39,7 @@ export default function App() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isClearDataOpen, setIsClearDataOpen] = useState(false);
+  const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
   const [preSelectedLoanId, setPreSelectedLoanId] = useState<string | undefined>(undefined);
   
   // Receipt Modal
@@ -71,8 +73,11 @@ export default function App() {
       console.warn('Error fetching Supabase session:', err);
     });
 
-    const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = client.auth.onAuthStateChange((event, session) => {
       if (!isMounted) return;
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsResetPasswordOpen(true);
+      }
       if (session?.user?.email && isAuthorizedOwner(session.user.email)) {
         financeStore.setOwnerSession(session.user.email);
       }
@@ -96,11 +101,23 @@ export default function App() {
     financeStore.setOwnerSession(null);
   };
 
-  // Inspect URL for public customer passbook token (?track=TOKEN or #track=TOKEN)
+  // Inspect URL for public customer passbook token (?track=TOKEN or #track=TOKEN) or Supabase password reset link
   useEffect(() => {
     const handleUrlCheck = () => {
       const urlParams = new URLSearchParams(window.location.search);
       let token = urlParams.get('track');
+
+      const hash = window.location.hash || '';
+      const search = window.location.search || '';
+
+      // Check if arriving via Supabase Password Recovery link
+      if (
+        hash.includes('reset-password') ||
+        hash.includes('type=recovery') ||
+        search.includes('type=recovery')
+      ) {
+        setIsResetPasswordOpen(true);
+      }
 
       if (!token && window.location.hash) {
         const hashParams = new URLSearchParams(window.location.hash.replace('#', '?'));
@@ -174,6 +191,22 @@ export default function App() {
     );
   }
 
+  // DEDICATED SUPABASE RESET PASSWORD PAGE
+  if (isResetPasswordOpen) {
+    return (
+      <ResetPasswordPage
+        onBackToLogin={() => {
+          setIsResetPasswordOpen(false);
+          window.history.pushState({}, '', window.location.pathname);
+        }}
+        onSuccess={() => {
+          setIsResetPasswordOpen(false);
+          window.history.pushState({}, '', window.location.pathname);
+        }}
+      />
+    );
+  }
+
   // FIRST: If owner is not logged in, show dedicated Supabase Login Page first!
   if (!storeState.currentUserEmail) {
     return (
@@ -181,6 +214,7 @@ export default function App() {
         onLoginSuccess={(email) => {
           financeStore.setOwnerSession(email);
         }}
+        onOpenResetPage={() => setIsResetPasswordOpen(true)}
       />
     );
   }
