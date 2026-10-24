@@ -5,8 +5,19 @@
 
 import { Installment, Loan, PaymentAllocation } from '../types/finance';
 
-export const PENALTY_AMOUNT = 150; // Standard Tamil Nadu weekly loan late penalty
+export const PENALTY_PERCENTAGE = 0.10; // 10% of weekly due (1000 = 100, 2000 = 200)
+export const PENALTY_AMOUNT = 100; // Baseline penalty for ₹1000 due
 export const TIMEZONE = 'Asia/Kolkata';
+
+/**
+ * Calculate late penalty for an overdue installment.
+ * Rule: 10% of that specific week's due amount (e.g. ₹1,000 = ₹100, ₹2,000 = ₹200).
+ * Assessed only once on that specific overdue week when passing Wednesday.
+ */
+export function calculateInstallmentPenaltyAmount(amountDue: number): number {
+  const baseDue = amountDue > 0 ? amountDue : 1000;
+  return Math.round(baseDue * 0.1);
+}
 
 /**
  * Format any number into Indian Currency format (e.g. ₹ 1,50,000.00 or ₹ 5,000)
@@ -94,14 +105,15 @@ export function evaluateInstallmentPenalty(
     return { shouldApply: false, penaltyAmount: 0 };
   }
 
-  // Never assess duplicate penalties
+  // Never assess duplicate penalties — antha week mattum penalty add panna pothum
   if (installment.penaltyAssessed > 0) {
     return { shouldApply: false, penaltyAmount: 0 };
   }
 
-  // Check Wednesday cutoff
+  // Check Wednesday cutoff: Sunday due -> Mon/Tue grace -> Wed penalty applies
   if (isWednesdayOrLater(currentDate, installment.dueDate)) {
-    return { shouldApply: true, penaltyAmount: PENALTY_AMOUNT };
+    const penaltyAmount = calculateInstallmentPenaltyAmount(installment.amountDue);
+    return { shouldApply: true, penaltyAmount };
   }
 
   return { shouldApply: false, penaltyAmount: 0 };

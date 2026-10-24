@@ -577,7 +577,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
 
-        {/* Wednesday Penalty Rules Configuration */}
+        {/* Save Changes Button */}
+        <div className="flex justify-end pt-1">
+          <button
+            type="submit"
+            className="flex items-center gap-2 px-6 py-2.5 font-bold text-xs text-black bg-cyan-400 hover:bg-cyan-300 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all cursor-pointer"
+          >
+            <Save className="w-4 h-4" />
+            Save Business Settings
+          </button>
+        </div>
+      </form>
+
+      {/* Wednesday Penalty Rules Configuration */}
         <div className="p-6 rounded-2xl neon-card space-y-4">
           <div className="pb-3 border-b border-slate-800">
             <h3 className="text-base font-bold text-white font-display flex items-center gap-2">
@@ -602,8 +614,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
               <span className="text-[10px] text-slate-500 uppercase block">Wednesday Penalty</span>
-              <span className="text-base font-bold text-rose-400">₹150 (Once only)</span>
-              <span className="text-[10px] text-slate-400 block mt-0.5">Applied to unpaid dues</span>
+              <span className="text-base font-bold text-rose-400">10% of Due (Once only)</span>
+              <span className="text-[10px] text-slate-400 block mt-0.5">1000 = ₹100, 2000 = ₹200 for that week</span>
             </div>
           </div>
         </div>
@@ -1062,19 +1074,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </p>
           </div>
         )}
-
-        {/* Save Changes Button */}
-        <div className="flex justify-end pt-2">
-          <button
-            type="submit"
-            className="flex items-center gap-2 px-6 py-2.5 font-bold text-xs text-black bg-cyan-400 hover:bg-cyan-300 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all"
-          >
-            <Save className="w-4 h-4" />
-            Save Business Settings
-          </button>
-        </div>
-
-      </form>
 
       {/* SQL SCHEMA MIGRATION VIEWER MODAL */}
       {isSqlModalOpen && (

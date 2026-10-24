@@ -149,6 +149,68 @@
   animation: dustDrift 14s ease-in-out infinite;
 }
 
+/* Star Run Border Outline & Orbit Animations (Matches Reference Image) */
+@keyframes starRunDash {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -600;
+  }
+}
+
+@keyframes orbitRotateClockwise {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orbitRotateCounter {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes pulseGlowPoint {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px currentColor);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.4);
+    filter: drop-shadow(0 0 9px currentColor);
+  }
+}
+
+.animate-star-run {
+  stroke-dasharray: 70 200;
+  animation: starRunDash 5s linear infinite;
+}
+
+.animate-orbit-slow {
+  animation: orbitRotateClockwise 48s linear infinite;
+  transform-origin: center;
+}
+
+.animate-orbit-reverse {
+  animation: orbitRotateCounter 36s linear infinite;
+  transform-origin: center;
+}
+
+.animate-glow-dot {
+  animation: pulseGlowPoint 2.6s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
 /* Master Running Border Card (Used across all grid boxes and panels) */
 .neon-card, .grid-box-running {
   position: relative;

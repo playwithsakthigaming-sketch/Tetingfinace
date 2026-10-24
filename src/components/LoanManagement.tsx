@@ -63,9 +63,9 @@ export const LoanManagement: React.FC<LoanManagementProps> = ({
 
   // Form State
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
-  const [loanType, setLoanType] = useState<'standard_weekly' | 'daily_due' | 'sp_interest_only'>('sp_interest_only');
+  const [loanType, setLoanType] = useState<'standard_weekly' | 'daily_due' | 'sp_interest_only'>('standard_weekly');
   const [principal, setPrincipal] = useState(10000);
-  const [upfrontDeduction, setUpfrontDeduction] = useState(1000);
+  const [upfrontDeduction, setUpfrontDeduction] = useState(1500);
   const [weeklyDue, setWeeklyDue] = useState(1000);
   const [tenureWeeks, setTenureWeeks] = useState(10);
   const [dailyDue, setDailyDue] = useState(100);
@@ -76,7 +76,7 @@ export const LoanManagement: React.FC<LoanManagementProps> = ({
   const [spFrequency, setSpFrequency] = useState<'weekly' | 'monthly'>('weekly');
   const [spWeeklyAmount, setSpWeeklyAmount] = useState(1000);
   const [spRateMonthly, setSpRateMonthly] = useState(2.0);
-  const [loanNotes, setLoanNotes] = useState('Speed Interest (SP) Loan - ₹1,000/week speed interest');
+  const [loanNotes, setLoanNotes] = useState('Weekly Sunday Microloan (Sunday Dues)');
   const [showSchedulePreview, setShowSchedulePreview] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -145,23 +145,23 @@ export const LoanManagement: React.FC<LoanManagementProps> = ({
     <div className="space-y-6 pb-12">
       
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl neon-card">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 sm:p-5 rounded-2xl neon-card">
         <div>
-          <h2 className="text-xl font-bold text-white font-display">Loan Portfolio Management</h2>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <h2 className="text-lg sm:text-xl font-bold text-white font-display">Loan Portfolio Management</h2>
+          <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
             Individual weekly loans and SP loans. Balances are strictly isolated per loan agreement.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="relative">
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-60 md:w-64">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search by Loan ID or borrower..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 w-56 sm:w-64"
+              className="w-full pl-9 pr-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
             />
           </div>
           {canCreateLoan ? (
@@ -170,34 +170,35 @@ export const LoanManagement: React.FC<LoanManagementProps> = ({
                 setFormError(null);
                 setIsNewLoanOpen(true);
               }}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-black bg-cyan-400 hover:bg-cyan-300 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-colors whitespace-nowrap cursor-pointer"
+              className="flex items-center gap-1.5 px-3 sm:px-3.5 py-2 text-xs font-semibold text-black bg-cyan-400 hover:bg-cyan-300 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-colors whitespace-nowrap cursor-pointer shrink-0"
             >
               <Plus className="w-4 h-4" />
-              Issue New Loan
+              <span className="hidden xs:inline">Issue New Loan</span>
+              <span className="xs:hidden">New Loan</span>
             </button>
           ) : (
-            <span className="text-[10px] text-cyan-300 font-mono px-2.5 py-1.5 rounded-lg bg-cyan-950/60 border border-cyan-800/50 whitespace-nowrap">
-              Agent Balance Look-up
+            <span className="text-[10px] text-cyan-300 font-mono px-2.5 py-1.5 rounded-lg bg-cyan-950/60 border border-cyan-800/50 whitespace-nowrap shrink-0">
+              Agent
             </span>
           )}
         </div>
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+      <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 text-[11px] sm:text-xs -mx-1 px-1 sm:mx-0 sm:px-0">
         <button
           onClick={() => setFilterType('all')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
+          className={`px-2.5 sm:px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
             filterType === 'all'
               ? 'bg-cyan-950/60 text-cyan-300 border border-cyan-500/30 font-semibold'
               : 'text-slate-400 hover:bg-slate-800'
           }`}
         >
-          All Loans ({loans.length})
+          All ({loans.length})
         </button>
         <button
           onClick={() => setFilterType('active')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
+          className={`px-2.5 sm:px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
             filterType === 'active'
               ? 'bg-cyan-950/60 text-cyan-300 border border-cyan-500/30 font-semibold'
               : 'text-slate-400 hover:bg-slate-800'
@@ -207,7 +208,7 @@ export const LoanManagement: React.FC<LoanManagementProps> = ({
         </button>
         <button
           onClick={() => setFilterType('overdue')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
+          className={`px-2.5 sm:px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
             filterType === 'overdue'
               ? 'bg-rose-950/60 text-rose-300 border border-rose-500/30 font-semibold'
               : 'text-slate-400 hover:bg-slate-800'
@@ -217,7 +218,7 @@ export const LoanManagement: React.FC<LoanManagementProps> = ({
         </button>
         <button
           onClick={() => setFilterType('sp')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
+          className={`px-2.5 sm:px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
             filterType === 'sp'
               ? 'bg-purple-950/60 text-purple-300 border border-purple-500/30 font-semibold'
               : 'text-slate-400 hover:bg-slate-800'
@@ -227,23 +228,23 @@ export const LoanManagement: React.FC<LoanManagementProps> = ({
         </button>
         <button
           onClick={() => setFilterType('daily')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
+          className={`px-2.5 sm:px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
             filterType === 'daily'
               ? 'bg-amber-950/60 text-amber-300 border border-amber-500/30 font-semibold'
               : 'text-slate-400 hover:bg-slate-800'
           }`}
         >
-          Day Due · No Penalty ({loans.filter((l) => l.loanType === 'daily_due').length})
+          Daily Due ({loans.filter((l) => l.loanType === 'daily_due').length})
         </button>
         <button
           onClick={() => setFilterType('completed')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
+          className={`px-2.5 sm:px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
             filterType === 'completed'
               ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/30 font-semibold'
               : 'text-slate-400 hover:bg-slate-800'
           }`}
         >
-          Closed / Fully Settled ({loans.filter((l) => l.status === 'completed').length})
+          Settled ({loans.filter((l) => l.status === 'completed').length})
         </button>
       </div>
 
@@ -399,26 +400,26 @@ export const LoanManagement: React.FC<LoanManagementProps> = ({
               </div>
 
               {/* Action Buttons */}
-              <div className="pt-3 border-t border-slate-800 flex items-center gap-2">
+              <div className="pt-3 border-t border-slate-800 flex items-center gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap">
                 {l.loanType === 'sp_interest_only' ? (
                   <button
                     onClick={() => onOpenPayment(l.id)}
-                    className="flex-1 py-1.5 px-2 text-center text-xs font-semibold text-white bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors whitespace-nowrap shadow-[0_0_10px_rgba(168,85,247,0.3)]"
+                    className="flex-1 min-w-[110px] py-1.5 px-2 text-center text-xs font-semibold text-white bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors whitespace-nowrap shadow-[0_0_10px_rgba(168,85,247,0.3)]"
                   >
                     Collect SP Interest
                   </button>
                 ) : (
                   <button
                     onClick={() => onOpenMultipleDue(l.id)}
-                    className="flex-1 py-1.5 px-2 text-center text-xs font-semibold text-black bg-cyan-400 hover:bg-cyan-300 rounded-lg transition-colors whitespace-nowrap shadow-[0_0_10px_rgba(6,182,212,0.3)]"
+                    className="flex-1 min-w-[100px] py-1.5 px-2 text-center text-xs font-semibold text-black bg-cyan-400 hover:bg-cyan-300 rounded-lg transition-colors whitespace-nowrap shadow-[0_0_10px_rgba(6,182,212,0.3)]"
                   >
-                    {l.loanType === 'daily_due' ? 'Multiple Day Dues' : 'Multiple Due'}
+                    {l.loanType === 'daily_due' ? 'Day Dues' : 'Multiple Due'}
                   </button>
                 )}
 
                 <button
                   onClick={() => onOpenPayment(l.id)}
-                  className="py-1.5 px-3 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors whitespace-nowrap"
+                  className="py-1.5 px-2.5 sm:px-3 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors whitespace-nowrap shrink-0"
                 >
                   Payment
                 </button>
@@ -426,7 +427,7 @@ export const LoanManagement: React.FC<LoanManagementProps> = ({
                 {activeToken && (
                   <button
                     onClick={() => onOpenPassbookInApp(activeToken.token)}
-                    className="p-1.5 text-slate-400 hover:text-cyan-300 hover:bg-slate-800 rounded-lg transition-colors"
+                    className="p-1.5 text-slate-400 hover:text-cyan-300 hover:bg-slate-800 rounded-lg transition-colors shrink-0"
                     title="Open Customer Passbook"
                   >
                     <ExternalLink className="w-4 h-4" />
@@ -517,6 +518,7 @@ export const LoanManagement: React.FC<LoanManagementProps> = ({
                     type="button"
                     onClick={() => {
                       setLoanType('standard_weekly');
+                      setUpfrontDeduction(Math.round(principal * 0.15));
                       setLoanNotes('Weekly Sunday Microloan (Sunday Dues)');
                     }}
                     className={`p-3 rounded-xl border text-left transition-all relative flex flex-col justify-between ${
@@ -528,7 +530,7 @@ export const LoanManagement: React.FC<LoanManagementProps> = ({
                     <div>
                       <div className="font-bold text-xs text-white">Weekly Loan</div>
                       <div className="text-[10px] text-cyan-400/90 mt-0.5 leading-snug">
-                        Sunday dues · 10 weeks · 1% Wed penalty
+                        Sunday dues · 10 weeks · ₹1,500 upfront/10k
                       </div>
                     </div>
                   </button>
@@ -538,6 +540,7 @@ export const LoanManagement: React.FC<LoanManagementProps> = ({
                     type="button"
                     onClick={() => {
                       setLoanType('daily_due');
+                      setUpfrontDeduction(Math.round(principal * 0.15));
                       setLoanNotes('Daily Due Loan (Daily collections, Zero Late Penalty)');
                     }}
                     className={`p-3 rounded-xl border text-left transition-all relative flex flex-col justify-between ${
@@ -549,7 +552,7 @@ export const LoanManagement: React.FC<LoanManagementProps> = ({
                     <div>
                       <div className="font-bold text-xs text-white">Daily Due</div>
                       <div className="text-[10px] text-amber-400 font-medium mt-0.5 leading-snug">
-                        Daily collections · No Penalty (₹0)
+                        Daily collections · ₹1,500 upfront/10k · No Penalty
                       </div>
                     </div>
                   </button>
@@ -559,6 +562,7 @@ export const LoanManagement: React.FC<LoanManagementProps> = ({
                     type="button"
                     onClick={() => {
                       setLoanType('sp_interest_only');
+                      setUpfrontDeduction(0);
                       setLoanNotes(`Speed Interest (SP) Loan - ₹${spWeeklyAmount.toLocaleString('en-IN')}/week speed interest`);
                     }}
                     className={`p-3 rounded-xl border text-left transition-all relative flex flex-col justify-between ${
@@ -593,7 +597,11 @@ export const LoanManagement: React.FC<LoanManagementProps> = ({
                       type="button"
                       onClick={() => {
                         setPrincipal(preset);
-                        setUpfrontDeduction(Math.round(preset * 0.1));
+                        if (loanType === 'standard_weekly' || loanType === 'daily_due') {
+                          setUpfrontDeduction(Math.round(preset * 0.15));
+                        } else {
+                          setUpfrontDeduction(0);
+                        }
                         setSpWeeklyAmount(Math.round(preset * 0.1));
                         setWeeklyDue(Math.round(preset / 10));
                         setDailyDue(Math.round(preset / 100));
@@ -629,6 +637,14 @@ export const LoanManagement: React.FC<LoanManagementProps> = ({
                         onChange={(e) => {
                           const p = Number(e.target.value);
                           setPrincipal(p);
+                          if (loanType === 'standard_weekly' || loanType === 'daily_due') {
+                            setUpfrontDeduction(Math.round(p * 0.15));
+                          }
+                          setWeeklyDue(Math.round(p / 10));
+                          setDailyDue(Math.round(p / 100));
+                          if (loanType === 'sp_interest_only') {
+                            setSpWeeklyAmount(Math.round(p * 0.1));
+                          }
                         }}
                         className="w-full pl-6 pr-2.5 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white font-mono font-bold focus:outline-none focus:border-cyan-400"
                       />
@@ -636,9 +652,16 @@ export const LoanManagement: React.FC<LoanManagementProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1 font-semibold">
-                      Upfront Deduction (Tracked Separately) *
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-[11px] text-slate-400 font-semibold">
+                        Upfront Deduction (Tracked Separately) *
+                      </label>
+                      {(loanType === 'standard_weekly' || loanType === 'daily_due') && (
+                        <span className="text-[10px] text-amber-400 font-mono font-semibold">
+                          15% (₹1,500/10k)
+                        </span>
+                      )}
+                    </div>
                     <div className="relative">
                       <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-amber-400 font-bold">₹</span>
                       <input
@@ -650,6 +673,24 @@ export const LoanManagement: React.FC<LoanManagementProps> = ({
                         className="w-full pl-6 pr-2.5 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white font-mono font-bold focus:outline-none focus:border-cyan-400"
                       />
                     </div>
+                    {(loanType === 'standard_weekly' || loanType === 'daily_due') && (
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setUpfrontDeduction(Math.round(principal * 0.15))}
+                          className="text-[10px] px-2 py-0.5 rounded bg-amber-950/70 border border-amber-500/40 text-amber-300 hover:bg-amber-900/60 transition-colors"
+                        >
+                          Auto 15% (₹{Math.round(principal * 0.15).toLocaleString('en-IN')})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setUpfrontDeduction(0)}
+                          className="text-[10px] px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-400 hover:bg-slate-700 transition-colors"
+                        >
+                          ₹0
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div>

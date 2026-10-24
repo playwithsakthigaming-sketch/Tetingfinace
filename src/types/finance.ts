@@ -113,6 +113,8 @@ export interface Payment {
   paymentDate: string; // ISO string
   paymentMethod: PaymentMethod;
   referenceNo: string;
+  collectorName?: string;
+  collectorId?: string;
   notes?: string;
   idempotencyKey: string;
   allocations: PaymentAllocation;

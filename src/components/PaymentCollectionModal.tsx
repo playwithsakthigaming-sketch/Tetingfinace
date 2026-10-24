@@ -29,13 +29,16 @@ import {
   Layers,
   ArrowRight,
 } from 'lucide-react';
-import { Customer, Installment, Loan, Payment } from '../types/finance';
+import { Customer, Installment, Loan, Payment, Refund } from '../types/finance';
 import {
   calculateMultipleDueAllocation,
   formatCoveredWeeksSummary,
   formatIndianCurrency,
 } from '../utils/financeCalculations';
 import { sendWhatsAppInvoice } from '../utils/whatsappInvoice';
+import { MultipleDueEntryView } from './MultipleDueEntryView';
+import { RefundsSection } from './RefundsSection';
+import { financeStore } from '../services/financeStore';
 
 interface PaymentCollectionModalProps {
   isOpen: boolean;
@@ -43,11 +46,16 @@ interface PaymentCollectionModalProps {
   loans: Loan[];
   customers: Customer[];
   installments: Installment[];
+  payments?: Payment[];
+  refunds?: Refund[];
+  defaultCollectorName?: string;
   preSelectedLoanId?: string;
   onCollectWeeklyDues: (params: {
     loanId: string;
     amountReceived: number;
     paymentMethod: 'Cash' | 'UPI' | 'Bank Transfer' | 'Other';
+    collectorName?: string;
+    collectorId?: string;
     referenceNo?: string;
     notes?: string;
     excessAllocation?: 'next_due' | 'principal' | 'advance';
@@ -57,9 +65,18 @@ interface PaymentCollectionModalProps {
     interestAmount: number;
     principalRepayment: number;
     paymentMethod: 'Cash' | 'UPI' | 'Bank Transfer' | 'Other';
+    collectorName?: string;
+    collectorId?: string;
     referenceNo?: string;
     notes?: string;
   }) => Payment;
+  onIssueRefund?: (params: {
+    originalPaymentId: string;
+    amount: number;
+    reason: string;
+    paymentMethod: 'Cash' | 'UPI' | 'Bank Transfer' | 'Other';
+    referenceNo?: string;
+  }) => Refund;
   onViewReceipt: (payment: Payment) => void;
   // If embedded in a page rather than a popup modal
   isEmbedded?: boolean;
@@ -72,15 +89,23 @@ export const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
   loans,
   customers,
   installments,
+  payments = [],
+  refunds = [],
+  defaultCollectorName,
   preSelectedLoanId,
   onCollectWeeklyDues,
   onCollectSPPayment,
+  onIssueRefund,
   onViewReceipt,
   isEmbedded = false,
   onSwitchTab,
 }) => {
   // Top Switcher Tabs: 'standard' | 'multiday' | 'refund'
   const [activeTabMode, setActiveTabMode] = useState<'standard' | 'multiday' | 'refund'>('standard');
+
+  // Collector Info
+  const [collectorName, setCollectorName] = useState<string>(defaultCollectorName || 'Sakthi (Owner)');
+  const [collectorId, setCollectorId] = useState<string>('STAFF-AGENT-01');
 
   // Customer selection
   const [customerSearch, setCustomerSearch] = useState('');
@@ -312,6 +337,8 @@ export const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
           interestAmount: Number(allocInterest),
           principalRepayment: Number(allocPrincipal),
           paymentMethod,
+          collectorName,
+          collectorId,
           referenceNo: referenceNo || `SP-${Date.now()}`,
           notes:
             collectionNote ||
@@ -323,6 +350,8 @@ export const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
           loanId: currentLoan.id,
           amountReceived: Number(amountReceived),
           paymentMethod,
+          collectorName,
+          collectorId,
           referenceNo: referenceNo || `REC-${Date.now()}`,
           notes:
             collectionNote ||
@@ -424,14 +453,8 @@ export const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
 
         <button
           type="button"
-          onClick={() => {
-            if (onSwitchTab) {
-              onSwitchTab('multiple_due');
-            } else {
-              setActiveTabMode('multiday');
-            }
-          }}
-          className={`py-2 px-3 rounded-lg font-semibold text-center transition-all ${
+          onClick={() => setActiveTabMode('multiday')}
+          className={`py-2 px-3 rounded-lg font-semibold text-center transition-all cursor-pointer ${
             activeTabMode === 'multiday'
               ? 'bg-cyan-950/80 text-cyan-300 border border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.25)]'
               : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
@@ -442,14 +465,8 @@ export const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
 
         <button
           type="button"
-          onClick={() => {
-            if (onSwitchTab) {
-              onSwitchTab('refunds');
-            } else {
-              setActiveTabMode('refund');
-            }
-          }}
-          className={`py-2 px-3 rounded-lg font-semibold text-center transition-all ${
+          onClick={() => setActiveTabMode('refund')}
+          className={`py-2 px-3 rounded-lg font-semibold text-center transition-all cursor-pointer ${
             activeTabMode === 'refund'
               ? 'bg-cyan-950/80 text-cyan-300 border border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.25)]'
               : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
@@ -458,6 +475,40 @@ export const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
           Record Refund (Overpayment reversal (Req 1))
         </button>
       </div>
+
+      {activeTabMode === 'multiday' && (
+        <div className="pt-2">
+          <MultipleDueEntryView
+            loans={loans}
+            customers={customers}
+            installments={installments}
+            preSelectedLoanId={selectedLoanId || preSelectedLoanId}
+            onCollectDues={(params) =>
+              onCollectWeeklyDues({
+                ...params,
+                collectorName,
+                collectorId,
+              })
+            }
+            onViewReceipt={onViewReceipt}
+          />
+        </div>
+      )}
+
+      {activeTabMode === 'refund' && (
+        <div className="pt-2">
+          <RefundsSection
+            payments={payments}
+            refunds={refunds}
+            loans={loans}
+            customers={customers}
+            onIssueRefund={onIssueRefund || ((params) => financeStore.issueRefund(params))}
+          />
+        </div>
+      )}
+
+      {activeTabMode === 'standard' && (
+        <>
 
       {statusMessage && (
         <div
@@ -504,14 +555,11 @@ export const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
             {customers.length === 0 && (
               <option value="">-- No customers found in database --</option>
             )}
-            {filteredCustomers.map((c) => {
-              const custLoansCount = loans.filter((l) => l.customerId === c.id && l.status !== 'completed').length;
-              return (
-                <option key={c.id} value={c.id}>
-                  {c.fullName} ({c.uniqueId}) — {custLoansCount} Loan{custLoansCount !== 1 ? 's' : ''} · {c.address || 'Tamil Nadu'}
-                </option>
-              );
-            })}
+            {filteredCustomers.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.fullName} ({c.uniqueId})
+              </option>
+            ))}
           </select>
         </div>
 
@@ -743,8 +791,32 @@ export const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
             </div>
           </div>
 
-          {/* 3-Column Inputs: Method, Ref, Date/Time */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+          {/* 4-Column Inputs: Collector, Method, Ref, Date/Time */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+            <div>
+              <label className="block text-[11px] text-slate-400 mb-1 font-semibold flex items-center justify-between">
+                <span>Collector Name *</span>
+                <span className="text-[10px] text-cyan-400 font-mono">{collectorId}</span>
+              </label>
+              <select
+                value={collectorName}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCollectorName(val);
+                  if (val.includes('Sakthi')) setCollectorId('STAFF-AGENT-01');
+                  else if (val.includes('Anand')) setCollectorId('STAFF-MGR-01');
+                  else if (val.includes('Vignesh')) setCollectorId('STAFF-COLL-01');
+                  else setCollectorId('STAFF-AGENT-' + Math.floor(10 + Math.random() * 90));
+                }}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-cyan-400 font-medium"
+              >
+                <option value="Sakthi (Owner)">Sakthi (Owner) · STAFF-AGENT-01</option>
+                <option value="K. Sakthi Kumar">K. Sakthi Kumar · STAFF-AGENT-01</option>
+                <option value="M. Anand (Branch Manager)">M. Anand (Branch Manager) · STAFF-MGR-01</option>
+                <option value="K. Vignesh (Collection Agent)">K. Vignesh (Collection Agent) · STAFF-COLL-01</option>
+              </select>
+            </div>
+
             <div>
               <label className="block text-[11px] text-slate-400 mb-1 font-semibold">
                 Payment Method *
@@ -955,6 +1027,8 @@ export const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
         </button>
 
       </div>
+      </>
+      )}
 
     </div>
   );

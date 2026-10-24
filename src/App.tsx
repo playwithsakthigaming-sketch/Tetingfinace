@@ -364,7 +364,7 @@ export default function App() {
         />
 
         {/* Main Body */}
-        <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-6">
+        <main className="flex-1 max-w-7xl mx-auto w-full px-2.5 sm:px-6 lg:px-8 pt-3 sm:pt-6">
           {currentTab === 'dashboard' && (
             <Dashboard
               customers={storeState.customers}
@@ -437,9 +437,13 @@ export default function App() {
                 loans={storeState.loans}
                 customers={storeState.customers}
                 installments={storeState.installments}
+                payments={storeState.payments}
+                refunds={storeState.refunds}
+                defaultCollectorName={currentProfile?.displayName || 'Sakthi (Owner)'}
                 preSelectedLoanId={preSelectedLoanId}
                 onCollectWeeklyDues={(params) => financeStore.collectWeeklyDues(params)}
                 onCollectSPPayment={(params) => financeStore.collectSPLoanPayment(params)}
+                onIssueRefund={(params) => financeStore.issueRefund(params)}
                 onViewReceipt={handleViewReceipt}
                 onSwitchTab={setCurrentTab}
               />
@@ -775,9 +779,13 @@ export default function App() {
         loans={storeState.loans}
         customers={storeState.customers}
         installments={storeState.installments}
+        payments={storeState.payments}
+        refunds={storeState.refunds}
+        defaultCollectorName={currentProfile?.displayName || 'Sakthi (Owner)'}
         preSelectedLoanId={preSelectedLoanId}
         onCollectWeeklyDues={(params) => financeStore.collectWeeklyDues(params)}
         onCollectSPPayment={(params) => financeStore.collectSPLoanPayment(params)}
+        onIssueRefund={(params) => financeStore.issueRefund(params)}
         onViewReceipt={handleViewReceipt}
       />
 

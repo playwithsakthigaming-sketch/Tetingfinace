@@ -31,6 +31,7 @@ import {
   ConnectionHealth,
   runHealthCheck,
 } from '../services/supabase';
+import { MouseAtmosphere } from './MouseAtmosphere';
 
 interface LoginPageProps {
   onLoginSuccess: (email: string) => void;
@@ -217,37 +218,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenRese
   return (
     <div className="min-h-screen bg-[#050811] text-slate-100 flex flex-col justify-between relative overflow-x-hidden selection:bg-cyan-500 selection:text-black">
       
-      {/* Background Sacred Geometric Glow & Ambient Watermarks */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute -top-32 -left-32 w-96 h-96 bg-cyan-900/20 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute top-1/2 -right-32 w-96 h-96 bg-purple-900/20 rounded-full blur-3xl" />
-        <div className="absolute -bottom-32 left-1/3 w-96 h-96 bg-amber-900/15 rounded-full blur-3xl" />
-
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.035] select-none">
-          <svg width="600" height="600" viewBox="0 0 200 200" fill="none" stroke="currentColor">
-            <circle cx="100" cy="100" r="80" strokeWidth="1" strokeDasharray="4 4" className="text-cyan-400" />
-            <circle cx="100" cy="100" r="60" strokeWidth="1.5" className="text-purple-400" />
-            <polygon points="100,25 125,75 180,75 135,110 155,165 100,135 45,165 65,110 20,75 75,75" strokeWidth="1" className="text-cyan-300" />
-            <ellipse cx="100" cy="100" rx="40" ry="20" strokeWidth="1" className="text-purple-300" />
-          </svg>
-        </div>
-      </div>
+      {/* Dynamic Animated Background with Celestial Star Constellation & Glowing Atmosphere */}
+      <MouseAtmosphere />
 
       {/* Top Banner: Supabase Status Bar */}
-      <header className="relative z-10 w-full px-4 sm:px-8 py-3.5 border-b border-slate-800/80 bg-[#070b14]/80 backdrop-blur-md flex flex-wrap items-center justify-between gap-3">
+      <header className="relative z-10 w-full px-4 sm:px-8 py-3.5 border-b border-slate-800/80 bg-[#070b14]/85 backdrop-blur-md flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           {/* SSF Gold Logo Badge */}
-          <div className="flex flex-col items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-b from-[#1a1505] to-[#0a0802] border border-[#d97706]/70 shadow-[0_0_10px_rgba(217,119,6,0.25)] select-none">
+          <div className="flex flex-col items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-b from-[#1a1505] to-[#0a0802] border border-[#d4af37] shadow-[0_0_12px_rgba(212,175,55,0.4)] select-none">
             <span className="text-[9px] font-black tracking-wider text-[#fbbf24] leading-none">SSF</span>
             <span className="text-[6px] font-bold tracking-widest text-[#f59e0b] leading-tight">FINANCE</span>
           </div>
           <div>
-            <h1 className="text-xs sm:text-sm font-bold text-[#f59e0b] uppercase tracking-wider font-display leading-tight">
-              SRI SENNAMAL FINANCE
+            <h1 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider font-display leading-tight flex items-center gap-1.5">
+              <span>SRI SENNAMAL FINANCE</span>
+              <span className="text-[10px] text-[#fbbf24] font-normal hidden xs:inline">· ஸ்ரீ சென்னம்மாள்</span>
             </h1>
             <p className="text-[10px] text-slate-400 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-              <span>Coimbatore, Tamil Nadu</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
+              <span>Coimbatore, Tamil Nadu · Official Owner Gateway</span>
             </p>
           </div>
         </div>
@@ -289,23 +278,47 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenRese
 
       {/* Main Centered Login Card */}
       <main className="relative z-10 flex-1 flex items-center justify-center p-4 sm:p-6 my-4">
-        <div className="w-full max-w-md bg-[#0c1322]/95 border border-cyan-500/30 rounded-3xl shadow-[0_0_40px_rgba(6,182,212,0.12)] p-6 sm:p-8 backdrop-blur-xl relative">
+        <div className="w-full max-w-md neon-card p-6 sm:p-8 backdrop-blur-2xl relative shadow-[0_0_50px_rgba(0,229,255,0.2),0_0_25px_rgba(251,191,36,0.15)] border border-cyan-400/40">
           
-          {/* Top Brand & Title */}
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-cyan-950/60 border border-cyan-500/40 text-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.3)] mb-3">
-              <Sparkles className="w-7 h-7" />
+          {/* Top Distinctive Illuminated Logo & Emblem */}
+          <div className="flex flex-col items-center text-center mb-6">
+            <div className="relative mb-3.5 group">
+              {/* Outer Rotating Glowing Ring */}
+              <div className="absolute -inset-2.5 rounded-full border border-dashed border-cyan-400/50 animate-orbit-slow pointer-events-none" />
+              <div className="absolute -inset-1 rounded-full border border-amber-400/40 animate-orbit-reverse pointer-events-none" />
+              
+              {/* 3D Shield Badge with Gold & Neon Glow */}
+              <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-[#1a1405] via-[#091522] to-[#040811] border-2 border-[#d4af37] shadow-[0_0_30px_rgba(212,175,55,0.45),inset_0_0_15px_rgba(0,229,255,0.25)] flex flex-col items-center justify-center select-none transform transition-transform group-hover:scale-105">
+                <span className="text-[10px] text-[#fbbf24] leading-none mb-0.5 animate-pulse">★ ★ ★</span>
+                <span className="text-xl font-serif font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-b from-[#fff2a8] via-[#fbbf24] to-[#d97706] drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                  SSF
+                </span>
+                <span className="text-[7px] font-black tracking-[0.25em] text-[#00e5ff] uppercase mt-0.5">
+                  FINANCE
+                </span>
+              </div>
+
+              {/* Orbiting Starlight Particle Bead */}
+              <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#00e5ff] shadow-[0_0_10px_#00e5ff] animate-ping" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#00e5ff]" />
             </div>
 
-            <div className="text-xs font-semibold text-cyan-400 uppercase tracking-widest mb-1">
-              உரிமையாளர் உள்நுழைவு
+            {/* Brand Title with Gold & Cyan Dual Shimmer */}
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-cyan-950/70 border border-cyan-500/40 text-[10px] font-mono text-cyan-300 font-bold uppercase tracking-wider mb-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                Official Owner Portal
+              </div>
+              <h2 className="text-xl sm:text-2xl font-serif font-black tracking-wider text-white uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+                SRI SENNAMAL FINANCE
+              </h2>
+              <div className="text-xs font-semibold text-[#fbbf24] tracking-wide">
+                ஸ்ரீ சென்னம்மாள் பைனான்ஸ் · கோயம்புத்தூர்
+              </div>
+              <p className="text-[11px] text-slate-400 font-medium">
+                Gandhipuram & RS Puram · Weekly Loan Management
+              </p>
             </div>
-            <h2 className="text-xl sm:text-2xl font-black text-white font-display tracking-tight">
-              Owner Management Portal
-            </h2>
-            <p className="text-xs text-slate-400 mt-1">
-              Authorized Cloud Sign-In for Sri Sennamal Finance
-            </p>
           </div>
 
           {/* Navigation Mode Tabs: Sign In & Reset */}
@@ -317,13 +330,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenRese
                 setErrorMessage(null);
                 setSuccessMessage(null);
               }}
-              className={`py-2 px-2 font-bold rounded-lg transition-all ${
+              className={`py-2 px-2 font-bold rounded-lg transition-all cursor-pointer ${
                 activeTab === 'signin'
-                  ? 'bg-cyan-500 text-black shadow-[0_0_10px_rgba(6,182,212,0.4)]'
+                  ? 'bg-cyan-400 text-black shadow-[0_0_12px_rgba(6,182,212,0.4)]'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              Sign In
+              Owner Sign In
             </button>
             <button
               type="button"
@@ -332,9 +345,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenRese
                 setErrorMessage(null);
                 setSuccessMessage(null);
               }}
-              className={`py-2 px-2 font-bold rounded-lg transition-all ${
+              className={`py-2 px-2 font-bold rounded-lg transition-all cursor-pointer ${
                 activeTab === 'forgot'
-                  ? 'bg-cyan-500 text-black shadow-[0_0_10px_rgba(6,182,212,0.4)]'
+                  ? 'bg-cyan-400 text-black shadow-[0_0_12px_rgba(6,182,212,0.4)]'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -378,8 +391,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenRese
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter Email Address"
-                    className="w-full pl-9 pr-3 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-white font-mono focus:outline-none focus:border-cyan-400 transition-colors"
+                    placeholder="Enter Owner Email"
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-white font-mono focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all"
                   />
                 </div>
               </div>
@@ -394,12 +407,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenRese
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter Password"
-                    className="w-full pl-9 pr-10 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-400 transition-colors"
+                    className="w-full pl-9 pr-10 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -412,34 +425,34 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenRese
                     type="checkbox"
                     checked={rememberDevice}
                     onChange={(e) => setRememberDevice(e.target.checked)}
-                    className="rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-0"
+                    className="rounded bg-slate-900 border-slate-700 text-cyan-400 focus:ring-0"
                   />
-                  <span>Remember session on this device</span>
+                  <span>Remember this device</span>
                 </label>
                 <button
                   type="button"
                   onClick={() => setActiveTab('forgot')}
-                  className="text-cyan-400 hover:underline"
+                  className="text-cyan-400 hover:underline cursor-pointer"
                 >
-                  Forgot?
+                  Forgot Password?
                 </button>
               </div>
 
-              {/* Main Submit Button */}
+              {/* Main Submit Button with Gradient Glow */}
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 font-bold text-xs text-black bg-[#00e5ff] hover:bg-[#38bdf8] disabled:opacity-50 rounded-xl shadow-[0_0_20px_rgba(0,229,255,0.35)] transition-all active:scale-[0.99] mt-2 cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 font-black text-xs text-black bg-gradient-to-r from-cyan-400 via-sky-300 to-amber-300 hover:brightness-110 disabled:opacity-50 rounded-xl shadow-[0_0_25px_rgba(0,229,255,0.4)] transition-all active:scale-[0.99] mt-2 cursor-pointer uppercase tracking-wider"
               >
                 {isLoading ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Verifying with Supabase Auth...</span>
+                    <span>Verifying Credentials...</span>
                   </>
                 ) : (
                   <>
                     <Lock className="w-4 h-4" />
-                    <span>Login with Supabase</span>
+                    <span>Sign In to Financial Portal</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}

@@ -92,17 +92,17 @@ export function runAllAutomatedTests(): TestResult[] {
     return { pass, details: 'No penalty applied on Monday or Tuesday within grace period.' };
   });
 
-  // 3. One ₹150 penalty from Wednesday
-  runTest(3, 'One ₹150 penalty from Wednesday', 'Rule', () => {
+  // 3. 10% penalty on Wednesday (1000 = 100, 2000 = 200)
+  runTest(3, 'Wednesday 10% penalty (1000 = 100, 2000 = 200)', 'Rule', () => {
     const dueDate = '2026-10-18'; // Sunday
     const wednesday = new Date('2026-10-21T10:00:00Z');
 
-    const inst: Installment = {
-      id: 'inst-2',
+    const inst1000: Installment = {
+      id: 'inst-1000',
       loanId: 'l1',
       weekNumber: 1,
       dueDate,
-      amountDue: 500,
+      amountDue: 1000,
       amountPaid: 0,
       isPaid: false,
       isOverdue: false,
@@ -110,9 +110,23 @@ export function runAllAutomatedTests(): TestResult[] {
       penaltyPaid: 0,
     };
 
-    const wedEval = evaluateInstallmentPenalty(inst, wednesday);
-    const pass = wedEval.shouldApply && wedEval.penaltyAmount === 150;
-    return { pass, details: `Applied exact penalty of ₹${wedEval.penaltyAmount} on Wednesday.` };
+    const inst2000: Installment = {
+      id: 'inst-2000',
+      loanId: 'l1',
+      weekNumber: 2,
+      dueDate,
+      amountDue: 2000,
+      amountPaid: 0,
+      isPaid: false,
+      isOverdue: false,
+      penaltyAssessed: 0,
+      penaltyPaid: 0,
+    };
+
+    const eval1000 = evaluateInstallmentPenalty(inst1000, wednesday);
+    const eval2000 = evaluateInstallmentPenalty(inst2000, wednesday);
+    const pass = eval1000.shouldApply && eval1000.penaltyAmount === 100 && eval2000.penaltyAmount === 200;
+    return { pass, details: `Applied 10% penalty: ₹1,000 due = ₹${eval1000.penaltyAmount}, ₹2,000 due = ₹${eval2000.penaltyAmount}.` };
   });
 
   // 4. No duplicate penalties

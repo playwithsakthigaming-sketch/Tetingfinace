@@ -4,7 +4,7 @@
  * and launches WhatsApp Web / Mobile app directly via wa.me link.
  */
 
-import { Customer, Loan, Payment } from '../types/finance';
+import { Customer, Loan, Payment, Installment } from '../types/finance';
 import { formatIndianCurrency } from './financeCalculations';
 
 export interface WhatsAppInvoiceParams {
@@ -41,25 +41,21 @@ export function formatWhatsAppInvoiceText(params: WhatsAppInvoiceParams): string
   const { payment, customer, loan, coveredWeeksText, remainingBalance, nextDueDate, passbookUrl } = params;
 
   const receiptNo = payment.receiptNo;
-  const dateStr = new Date(payment.paymentDate).toLocaleDateString('en-IN', {
+  const pDate = new Date(payment.paymentDate);
+  const dateStr = pDate.toLocaleDateString('en-IN', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
   });
-  const timeStr = new Date(payment.paymentDate).toLocaleTimeString('en-IN', {
+  const timeStr = pDate.toLocaleTimeString('en-IN', {
     hour: '2-digit',
     minute: '2-digit',
-  });
+    hour12: true,
+  }).toLowerCase();
 
   const borrowerName = customer?.fullName || 'Valued Customer';
   const borrowerPhone = customer?.phone || '';
   const loanId = loan?.loanId || payment.loanId;
-  const loanScheme =
-    loan?.loanType === 'daily_due'
-      ? 'Day Due (Daily · No Penalty)'
-      : loan?.loanType === 'sp_interest_only'
-      ? `Speed Interest (SP) - ${loan.spFrequency === 'weekly' ? 'Weekly' : 'Monthly'}`
-      : 'Weekly Sunday Microloan';
 
   const amountPaid = formatIndianCurrency(payment.amount, true);
   const duesAlloc = formatIndianCurrency(payment.allocations.weeklyDue || 0, true);
@@ -67,7 +63,7 @@ export function formatWhatsAppInvoiceText(params: WhatsAppInvoiceParams): string
   const penaltyAlloc = formatIndianCurrency(payment.allocations.penalty || 0, true);
   const principalRepayAlloc = formatIndianCurrency(payment.allocations.principalRepayment || 0, true);
 
-  const dueDescription = coveredWeeksText || payment.notes || 'Weekly Due Collection';
+  const dueDescription = coveredWeeksText || payment.notes || 'Weekly Due';
   const remBalText =
     remainingBalance !== undefined
       ? formatIndianCurrency(remainingBalance, true)
@@ -78,39 +74,57 @@ export function formatWhatsAppInvoiceText(params: WhatsAppInvoiceParams): string
             : loan.outstandingWeeklyDues,
           true
         )
-      : '₹0';
+      : '₹0.00';
 
   const nextDue = nextDueDate || (loan ? 'Upcoming Sunday' : 'As per schedule');
 
+  // Allocation lines based on loan type & payment:
+  // - week and day due: show Due Amount & Principal Repay
+  // - sp loan: show SP Interest
+  const isSPLoan = loan?.loanType === 'sp_interest_only';
+  const isWeeklyOrDaily = !isSPLoan;
+
+  const allocLines: string[] = [];
+  if (isWeeklyOrDaily || (payment.allocations.weeklyDue && payment.allocations.weeklyDue > 0)) {
+    allocLines.push(` • Due Amount / தவணை: ${duesAlloc}`);
+  }
+  if (isSPLoan || (payment.allocations.interest && payment.allocations.interest > 0)) {
+    allocLines.push(` • SP Interest / வட்டி: ${interestAlloc}`);
+  }
+  if (payment.allocations.penalty && payment.allocations.penalty > 0) {
+    allocLines.push(` • Late Penalty / அபராதம்: ${penaltyAlloc}`);
+  }
+  if (isWeeklyOrDaily || (payment.allocations.principalRepayment && payment.allocations.principalRepayment > 0)) {
+    allocLines.push(` • Principal Repay / அசல்: ${principalRepayAlloc}`);
+  }
+
+  const allocText = allocLines.join('\n');
+
   const passbookBlock = passbookUrl
-    ? `\n📱 *Your Loan Passbook / உங்கள் பாஸ்புக்:*\n🔗 ${passbookUrl}\n_(Login இல்லாம உங்கள் லோன் விவரங்கள் மட்டும் பார்க்க கிளிக் செய்யவும்)_\n━━━━━━━━━━━━━━━━━━━━\n`
+    ? `📱 *Your Loan Passbook / உங்கள் பாஸ்புக்:*\n🔗 ${passbookUrl}\n━━━━━━━━━━━━━━━━━━━━\n\n`
     : '';
 
   return (
 `🏛️ *SRI SENNAMAL FINANCE*
-*ஸ்ரீ சென்னமால் பைனான்ஸ்*
+*ஸ்ரீ  சென்னம்மாள் பைனான்ஸ்*
 _Official Payment Receipt / கட்டண ரசீது_
 ━━━━━━━━━━━━━━━━━━━━
 🧾 *Receipt No:* ${receiptNo}
 📅 *Date & Time:* ${dateStr}, ${timeStr}
-👤 *Borrower:* ${borrowerName} (${borrowerPhone})
+👤 *Borrower:* ${borrowerName}${borrowerPhone ? ` (${borrowerPhone})` : ''}
 🆔 *Loan ID:* ${loanId}
-📋 *Scheme:* ${loanScheme}
 ━━━━━━━━━━━━━━━━━━━━
 💰 *TOTAL AMOUNT RECEIVED:* *${amountPaid}*
 💳 *Payment Mode:* ${payment.paymentMethod} ${payment.referenceNo ? `(${payment.referenceNo})` : ''}
-📌 *Collection Note:* ${dueDescription}
+📌 *Collection Note:* *${dueDescription}*
 
 📊 *Payment Allocation / ஒதுக்கீடு:*
- • Due Amount / தவணை: ${duesAlloc}
- • SP Interest / வட்டி: ${interestAlloc}
- • Late Penalty / அபராதம்: ${penaltyAlloc}
- • Principal Repay / அசல்: ${principalRepayAlloc}
+${allocText}
 ━━━━━━━━━━━━━━━━━━━━
 📉 *Remaining Balance:* *${remBalText}*
 📆 *Next Due Date:* ${nextDue}
-━━━━━━━━━━━━━━━━━━━━${passbookBlock}
-🙏 _நன்றி! எங்களை தொடர்பு கொள்ள:_
+━━━━━━━━━━━━━━━━━━━━
+${passbookBlock}🙏 _நன்றி! எங்களை தொடர்பு கொள்ள:_
 📞 *Helpline / உதவி எண்:* +91 7812834522
 📍 Coimbatore Central, Tamil Nadu
 
@@ -135,8 +149,189 @@ export function sendWhatsAppInvoice(params: WhatsAppInvoiceParams): { success: b
       url = `https://wa.me/?text=${encoded}`;
     }
 
-    // Open WhatsApp in new tab or app
-    window.open(url, '_blank', 'noopener,noreferrer');
+    // Open WhatsApp in new tab or app via anchor click
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    return { success: true, url };
+  } catch (err: any) {
+    return { success: false, url: '', error: err?.message || 'Failed to launch WhatsApp' };
+  }
+}
+
+export interface FinancialReportSummaryParams {
+  periodType: 'weekly' | 'monthly' | 'all';
+  payments: Payment[];
+  refunds?: any[];
+  loans: Loan[];
+  customers: Customer[];
+  installments: Installment[];
+  generatedBy?: string;
+  targetPhone?: string;
+  customStartDate?: string;
+  customEndDate?: string;
+}
+
+/**
+ * Format comprehensive Weekly or Monthly financial report for WhatsApp sharing
+ */
+export function formatWhatsAppFinancialReport(params: FinancialReportSummaryParams): string {
+  const { periodType, payments, refunds = [], loans, customers, installments, generatedBy } = params;
+
+  const now = new Date();
+  let rangeStart = new Date();
+  let rangeEnd = new Date();
+  let periodTitleEn = '';
+  let periodTitleTa = '';
+
+  if (periodType === 'weekly') {
+    // Current week: last 7 days
+    rangeStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    rangeEnd = now;
+    const startStr = rangeStart.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+    const endStr = rangeEnd.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    periodTitleEn = `WEEKLY REPORT (${startStr} – ${endStr})`;
+    periodTitleTa = `வாராந்திர நிதி அறிக்கை`;
+  } else if (periodType === 'monthly') {
+    // Current month
+    rangeStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    rangeEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    const monthName = now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+    periodTitleEn = `MONTHLY REPORT — ${monthName.toUpperCase()}`;
+    periodTitleTa = `மாதாந்திர நிதி அறிக்கை`;
+  } else {
+    periodTitleEn = `COMPREHENSIVE LEDGER REPORT`;
+    periodTitleTa = `முழு நிதி அறிக்கை`;
+    rangeStart = new Date(0);
+    rangeEnd = now;
+  }
+
+  // Filter payments within the period
+  const periodPayments = payments.filter((p) => {
+    if (periodType === 'all') return true;
+    const pDate = new Date(p.paymentDate).getTime();
+    return pDate >= rangeStart.getTime() && pDate <= rangeEnd.getTime();
+  });
+
+  // Filter refunds within period
+  const periodRefunds = refunds.filter((r) => {
+    if (periodType === 'all') return true;
+    const rDate = new Date(r.refundDate || r.createdAt || now).getTime();
+    return rDate >= rangeStart.getTime() && rDate <= rangeEnd.getTime();
+  });
+
+  // Filter new loans issued in period
+  const periodLoans = loans.filter((l) => {
+    if (periodType === 'all') return true;
+    const lDate = new Date(l.loanStartDate).getTime();
+    return lDate >= rangeStart.getTime() && lDate <= rangeEnd.getTime();
+  });
+
+  // Collections Breakdown
+  const totalGross = periodPayments.reduce((s, p) => s + (p.amount || 0), 0);
+  const totalRefund = periodRefunds.reduce((s, r) => s + (r.amount || 0), 0);
+  const netCollected = totalGross - totalRefund;
+
+  const duesAlloc = periodPayments.reduce((s, p) => s + (p.allocations?.weeklyDue || 0), 0);
+  const interestAlloc = periodPayments.reduce((s, p) => s + (p.allocations?.interest || 0), 0);
+  const penaltyAlloc = periodPayments.reduce((s, p) => s + (p.allocations?.penalty || 0), 0);
+  const principalAlloc = periodPayments.reduce((s, p) => s + (p.allocations?.principalRepayment || 0), 0);
+
+  // New Loans & Disbursed
+  const newLoansCount = periodLoans.length;
+  const newPrincipalTotal = periodLoans.reduce((s, l) => s + (l.originalPrincipal || 0), 0);
+  const newNetDisbursed = periodLoans.reduce((s, l) => s + (l.actualDisbursement || 0), 0);
+  const newUpfrontDeductions = Math.max(0, newPrincipalTotal - newNetDisbursed);
+
+  // Overdue Analysis
+  const overdueInsts = installments.filter((i) => i.isOverdue && !i.isPaid);
+  const overdueAmount = overdueInsts.reduce((s, i) => s + Math.max(0, i.amountDue - i.amountPaid), 0);
+  const overduePenalties = overdueInsts.reduce((s, i) => s + (i.penaltyAssessed || 150), 0);
+
+  // Portfolio Totals (Street Outstanding)
+  const activeLoans = loans.filter((l) => l.status === 'active' || l.status === 'overdue');
+  const activePrincipalOut = activeLoans.reduce((s, l) => s + (l.outstandingPrincipal || 0), 0);
+  const activeDuesOut = activeLoans.reduce((s, l) => s + (l.outstandingWeeklyDues || 0), 0);
+  const closedLoansCount = loans.filter((l) => l.status === 'completed').length;
+
+  const istTimestamp = new Date().toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+
+  return (
+`🏛️ *SRI SENNAMAL FINANCE*
+*ஸ்ரீ  சென்னம்மாள் பைனான்ஸ்*
+📊 *${periodTitleEn}*
+_${periodTitleTa}_
+━━━━━━━━━━━━━━━━━━━━
+⏰ *Report Time:* ${istTimestamp} (IST)
+👤 *Generated By:* ${generatedBy || 'Owner / Management'}
+🏢 *Office:* Gandhipuram / RS Puram, Coimbatore
+━━━━━━━━━━━━━━━━━━━━
+💰 *COLLECTIONS / வசூல் விபரம்:*
+ • *Net Collections Received:* *${formatIndianCurrency(netCollected, true)}*
+ • *Total Receipts Issued:* ${periodPayments.length} payments
+ ├─ Weekly Dues (தவணை வசூல்): ${formatIndianCurrency(duesAlloc)}
+ ├─ Speed Interest (SP வட்டி): ${formatIndianCurrency(interestAlloc)}
+ ├─ Late Penalty (அபராதம்): ${formatIndianCurrency(penaltyAlloc)}
+ └─ Principal Repayment (அசல்): ${formatIndianCurrency(principalAlloc)}
+${totalRefund > 0 ? ` • Refunds Adjusted: -${formatIndianCurrency(totalRefund)}\n` : ''}━━━━━━━━━━━━━━━━━━━━
+🆕 *NEW LOANS DISBURSED / புதிய கடன்கள்:*
+ • Loans Issued in Period: ${newLoansCount}
+ • Total Principal Disbursed: ${formatIndianCurrency(newPrincipalTotal)}
+ • Net Cash In Hand Disbursed: ${formatIndianCurrency(newNetDisbursed)}
+ • Upfront Deductions (15%): *${formatIndianCurrency(newUpfrontDeductions)}*
+━━━━━━━━━━━━━━━━━━━━
+⚠️ *OVERDUE & WEDNESDAY PENALTIES:*
+ • Overdue Accounts: ${overdueInsts.length} installments
+ • Overdue Dues Pending: *${formatIndianCurrency(overdueAmount)}*
+ • Overdue Penalties (₹150/wk): *${formatIndianCurrency(overduePenalties)}*
+━━━━━━━━━━━━━━━━━━━━
+📈 *TOTAL ACTIVE PORTFOLIO / நிலவரம்:*
+ • Active Borrowers on Books: ${customers.filter((c) => c.status === 'active').length}
+ • Total Active Principal on Street: *${formatIndianCurrency(activePrincipalOut)}*
+ • Pending Installment Dues: *${formatIndianCurrency(activeDuesOut)}*
+ • Closed & Settled Loans: ${closedLoansCount}
+━━━━━━━━━━━━━━━━━━━━
+📞 *Sri Sennamal Finance Helpline:* +91 7812834522
+📍 Coimbatore Central, Tamil Nadu
+_Automated Cloud Sync · Reconciled Finance Engine_`
+  );
+}
+
+/**
+ * Get direct WhatsApp link for report
+ */
+export function getWhatsAppReportUrl(params: FinancialReportSummaryParams): string {
+  const text = formatWhatsAppFinancialReport(params);
+  const cleanPhone = cleanPhoneNumber(params.targetPhone || '7812834522');
+  const encoded = encodeURIComponent(text);
+  return cleanPhone ? `https://wa.me/${cleanPhone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
+}
+
+/**
+ * One-Click WhatsApp Financial Report Sender
+ */
+export function sendWhatsAppFinancialReport(params: FinancialReportSummaryParams): { success: boolean; url: string; error?: string } {
+  try {
+    const url = getWhatsAppReportUrl(params);
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
     return { success: true, url };
   } catch (err: any) {
     return { success: false, url: '', error: err?.message || 'Failed to launch WhatsApp' };

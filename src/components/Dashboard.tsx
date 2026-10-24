@@ -20,9 +20,11 @@ import {
   Search,
   Plus,
   ArrowRight,
+  Share2,
 } from 'lucide-react';
 import { Customer, Installment, Loan, Payment, Refund } from '../types/finance';
 import { formatIndianCurrency } from '../utils/financeCalculations';
+import { sendWhatsAppFinancialReport } from '../utils/whatsappInvoice';
 
 interface DashboardProps {
   customers: Customer[];
@@ -124,20 +126,39 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+          {/* 1-Click WhatsApp Weekly Report Button */}
+          <button
+            onClick={() => {
+              sendWhatsAppFinancialReport({
+                periodType: 'weekly',
+                payments,
+                refunds,
+                loans,
+                customers,
+                installments,
+              });
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-black bg-[#25D366] hover:bg-[#20ba59] rounded-xl transition-all whitespace-nowrap shadow-[0_0_14px_rgba(37,211,102,0.35)] active:scale-95 cursor-pointer"
+            title="1-Click: Share Weekly Report on WhatsApp"
+          >
+            <Share2 className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Weekly Report</span>
+          </button>
+
           {/* Evaluate Wednesday Penalties Button */}
           <button
             onClick={handleEvaluatePenalties}
-            className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-200 bg-[#16122d] hover:bg-[#201844] border border-purple-500/40 rounded-xl transition-colors whitespace-nowrap shadow-[0_0_12px_rgba(168,85,247,0.15)]"
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-200 bg-[#16122d] hover:bg-[#201844] border border-purple-500/40 rounded-xl transition-colors whitespace-nowrap shadow-[0_0_12px_rgba(168,85,247,0.15)] cursor-pointer"
           >
             <Clock className="w-3.5 h-3.5 text-purple-400" />
-            <span>Evaluate Wednesday Penalties</span>
+            <span>Evaluate Penalties</span>
           </button>
 
           {/* Record Collection Button */}
           <button
             onClick={() => onOpenPaymentModal()}
-            className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-black bg-[#00e5ff] hover:bg-[#38bdf8] rounded-xl transition-all whitespace-nowrap shadow-[0_0_15px_rgba(0,229,255,0.4)] active:scale-95"
+            className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-black bg-[#00e5ff] hover:bg-[#38bdf8] rounded-xl transition-all whitespace-nowrap shadow-[0_0_15px_rgba(0,229,255,0.4)] active:scale-95 cursor-pointer"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
             <span>Record Collection</span>
@@ -535,8 +556,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       </td>
 
                       <td className="py-3 px-3">
-                        <div className="font-semibold text-white">K. Sakthi Kumar</div>
-                        <div className="text-[10px] text-slate-400 font-mono">STAFF-AGENT-01</div>
+                        <div className="font-semibold text-white">
+                          {p.collectorName || 'K. Sakthi Kumar'}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono">
+                          {p.collectorId || 'STAFF-AGENT-01'}
+                        </div>
                       </td>
 
                       <td className="py-3 px-3">

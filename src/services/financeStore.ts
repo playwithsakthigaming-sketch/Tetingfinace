@@ -130,13 +130,13 @@ const INITIAL_LOANS: Loan[] = [
       weeklyDueDate: 'Sunday',
       gracePeriodDays: 2,
       penaltyApplyDay: 'Wednesday',
-      penaltyAmount: 150,
+      penaltyAmount: 50, // 10% of 500 due
     },
     status: 'active',
     outstandingPrincipal: 5000,
     outstandingWeeklyDues: 2500,
     outstandingInterest: 0,
-    outstandingPenalties: 150,
+    outstandingPenalties: 50,
     totalPaidPrincipal: 2500,
     totalPaidDues: 2500,
     totalPaidInterest: 0,
@@ -253,7 +253,7 @@ const INITIAL_INSTALLMENTS: Installment[] = [
       return {
         ...inst,
         isOverdue: true,
-        penaltyAssessed: 150,
+        penaltyAssessed: 50,
         penaltyDate: '2026-10-21',
       };
     }
@@ -288,6 +288,8 @@ const INITIAL_PAYMENTS: Payment[] = [
     paymentDate: '2026-10-04T11:20:00.000Z',
     paymentMethod: 'Cash',
     referenceNo: 'CASH-REC-101',
+    collectorName: 'Sakthi (Owner)',
+    collectorId: 'STAFF-AGENT-01',
     notes: 'Collected Week 1–5 in single visit',
     idempotencyKey: 'idemp-pay-101',
     allocations: {
@@ -310,6 +312,8 @@ const INITIAL_PAYMENTS: Payment[] = [
     paymentDate: '2026-10-04T14:45:00.000Z',
     paymentMethod: 'UPI',
     referenceNo: 'UPI984210002',
+    collectorName: 'K. Vignesh (Collection Agent)',
+    collectorId: 'STAFF-AGENT-02',
     notes: 'Week 1–3 payment',
     idempotencyKey: 'idemp-pay-102',
     allocations: {
@@ -409,9 +413,9 @@ const INITIAL_LEDGER: LedgerTransaction[] = [
     description: 'Overdue Wednesday Penalty (Week 6)',
     type: 'debit',
     category: 'penalty',
-    amount: 150,
+    amount: 100,
     referenceNo: 'PEN-LN-2026-002-W6',
-    balanceAfter: 2650,
+    balanceAfter: 2600,
   },
 ];
 
@@ -605,7 +609,7 @@ class FinanceStore {
       this.state.installments = updatedInstallments;
       this.addAuditLog(
         'Penalty Assessment',
-        `Assessed ₹150 Wednesday penalty on ${assessedCount} overdue installment(s).`
+        `Assessed Wednesday penalty (10% of due: 1000=100, 2000=200) on ${assessedCount} overdue installment(s).`
       );
       this.autoSave();
     }
@@ -716,7 +720,7 @@ class FinanceStore {
         weeklyDueDate: 'Sunday',
         gracePeriodDays: 2,
         penaltyApplyDay: 'Wednesday',
-        penaltyAmount: params.loanType === 'standard_weekly' ? 150 : 0, // Daily due has NO penalty
+        penaltyAmount: params.loanType === 'standard_weekly' ? Math.round((params.weeklyDueAmount || 1000) * 0.1) : 0, // 10% on weekly due (1000 = 100, 2000 = 200)
       },
       status: 'active',
       outstandingPrincipal: params.originalPrincipal,
@@ -857,6 +861,8 @@ class FinanceStore {
     loanId: string;
     amountReceived: number;
     paymentMethod: 'Cash' | 'UPI' | 'Bank Transfer' | 'Other';
+    collectorName?: string;
+    collectorId?: string;
     referenceNo?: string;
     notes?: string;
     selectedInstallmentIds?: string[];
@@ -917,6 +923,8 @@ class FinanceStore {
       paymentDate: new Date().toISOString(),
       paymentMethod: params.paymentMethod,
       referenceNo: params.referenceNo || `REF-${Date.now()}`,
+      collectorName: params.collectorName || 'K. Sakthi Kumar',
+      collectorId: params.collectorId || 'STAFF-AGENT-01',
       notes: params.notes || `Collected ${coveredWeeksText}`,
       idempotencyKey: `idemp-${Date.now()}-${Math.random().toString(36).substring(7)}`,
       allocations: {
@@ -966,6 +974,8 @@ class FinanceStore {
     interestAmount: number;
     principalRepayment: number;
     paymentMethod: 'Cash' | 'UPI' | 'Bank Transfer' | 'Other';
+    collectorName?: string;
+    collectorId?: string;
     referenceNo?: string;
     notes?: string;
   }): Payment {
@@ -1002,6 +1012,8 @@ class FinanceStore {
       paymentDate: new Date().toISOString(),
       paymentMethod: params.paymentMethod,
       referenceNo: params.referenceNo || `REF-${Date.now()}`,
+      collectorName: params.collectorName || 'K. Sakthi Kumar',
+      collectorId: params.collectorId || 'STAFF-AGENT-01',
       notes: params.notes || `SP Loan Payment (Interest: ₹${params.interestAmount}, Principal: ₹${params.principalRepayment})`,
       idempotencyKey: `idemp-sp-${Date.now()}-${Math.random().toString(36).substring(7)}`,
       allocations: {

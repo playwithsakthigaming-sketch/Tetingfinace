@@ -210,6 +210,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   {payment.paymentMethod}
                 </span>
               </div>
+
+              {/* Authorized Collector */}
+              <div className="flex justify-between items-center py-1 border-t border-slate-800/60 pt-1.5">
+                <span className="text-slate-400 uppercase tracking-wider text-[11px]">Authorized Collector</span>
+                <span className="font-medium text-slate-200">
+                  {payment.collectorName || 'K. Sakthi Kumar'}
+                </span>
+              </div>
             </div>
 
             {/* Footer Note */}

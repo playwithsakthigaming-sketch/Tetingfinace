@@ -127,13 +127,13 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-40 bg-[#050a14]/98 backdrop-blur-md border-b border-cyan-950/60 shadow-[0_4px_20px_rgba(0,0,0,0.6)]">
-      <div className="w-full px-2 sm:px-4 lg:px-6">
-        <div className="flex items-center justify-between h-14 sm:h-16 gap-2">
+      <div className="w-full max-w-full overflow-hidden px-2 sm:px-4 lg:px-6">
+        <div className="flex items-center justify-between h-13 sm:h-16 gap-1 sm:gap-2">
           
           {/* ======================================================== */}
-          {/* LEFT: Hamburger Menu + SSF Brand Lockup (Matches Image 1) */}
+          {/* LEFT: Hamburger Menu + SSF Brand Lockup */}
           {/* ======================================================== */}
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 flex-1">
             {/* Hamburger Button for Mobile & Desktop Navigation */}
             <button
               onClick={onToggleSidebar}
@@ -143,23 +143,24 @@ export const Header: React.FC<HeaderProps> = ({
               <Menu className="w-5 h-5" />
             </button>
 
-            {/* SSF Gold/Dark Badge matching Image 1 */}
-            <div className="relative shrink-0 flex flex-col items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-[#0c1a14] border border-[#d4af37] shadow-[0_0_12px_rgba(212,175,55,0.4)] select-none">
-              <span className="text-[7px] sm:text-[8px] text-[#fbbf24] leading-none mb-0.5">★</span>
-              <span className="text-[9px] sm:text-[11px] font-black tracking-wider text-[#fbbf24] leading-none font-serif">
+            {/* SSF Gold/Dark Badge */}
+            <div className="relative shrink-0 flex flex-col items-center justify-center w-7 h-7 sm:w-10 sm:h-10 rounded-lg bg-[#0c1a14] border border-[#d4af37] shadow-[0_0_12px_rgba(212,175,55,0.4)] select-none">
+              <span className="text-[6px] sm:text-[8px] text-[#fbbf24] leading-none mb-0.5">★</span>
+              <span className="text-[8px] sm:text-[11px] font-black tracking-wider text-[#fbbf24] leading-none font-serif">
                 SSF
               </span>
-              <span className="text-[5px] sm:text-[6.5px] font-bold tracking-widest text-[#d4af37] leading-none mt-0.5">
+              <span className="text-[4px] sm:text-[6.5px] font-bold tracking-widest text-[#d4af37] leading-none mt-0.5">
                 ★
               </span>
             </div>
 
-            {/* Brand Title (Serif White) & Subtitle (Green Dot + Amber Text) */}
-            <div className="flex flex-col min-w-0 truncate">
-              <span className="text-xs sm:text-base font-serif font-black tracking-wider text-white uppercase leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] truncate">
-                SRI SENNAMAL FINANCE
+            {/* Brand Title (Serif White) & Subtitle */}
+            <div className="flex flex-col min-w-0">
+              <span className="text-[11px] sm:text-base font-serif font-black tracking-wider text-white uppercase leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] truncate">
+                <span className="hidden sm:inline">SRI SENNAMAL FINANCE</span>
+                <span className="sm:hidden">SRI SENNAMAL</span>
               </span>
-              <div className="flex items-center gap-1.5 text-[9px] sm:text-[11px] font-medium leading-none mt-0.5 truncate">
+              <div className="hidden md:flex items-center gap-1.5 text-[9px] sm:text-[11px] font-medium leading-none mt-0.5 truncate">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse shrink-0" />
                 <span className="text-[#f59e0b] truncate font-medium">
                   Weekly Microfinance · Tamil Nadu, India
@@ -167,7 +168,7 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
 
-            {/* Light Sun Icon Toggle Button (Matches Image 1) */}
+            {/* Light Sun Icon Toggle Button */}
             <button
               type="button"
               onClick={() => {}}
@@ -177,13 +178,13 @@ export const Header: React.FC<HeaderProps> = ({
               <Sun className="w-4 h-4" />
             </button>
 
-            {/* ⊕ Pay Button (Vibrant Cyan Pill - Matches Image 1) */}
+            {/* ⊕ Pay Button (Vibrant Cyan Pill) */}
             <button
               onClick={onOpenNewCollection}
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-1.5 rounded-full bg-[#00e5ff] hover:bg-[#38bdf8] text-black font-extrabold text-xs shadow-[0_0_16px_rgba(0,229,255,0.45)] transition-all active:scale-95 shrink-0 cursor-pointer ml-1"
+              className="flex items-center gap-1 px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-full bg-[#00e5ff] hover:bg-[#38bdf8] text-black font-extrabold text-[11px] sm:text-xs shadow-[0_0_14px_rgba(0,229,255,0.45)] transition-all active:scale-95 shrink-0 cursor-pointer ml-0.5 sm:ml-1"
               title="Collect Loan Due / Pay"
             >
-              <PlusCircle className="w-4 h-4 stroke-[2.5]" />
+              <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
               <span className="tracking-wide">Pay</span>
             </button>
           </div>
@@ -191,16 +192,16 @@ export const Header: React.FC<HeaderProps> = ({
           {/* ======================================================== */}
           {/* RIGHT: Live IST Clock + Language Toggle + Role Badge + Profile */}
           {/* ======================================================== */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             
-            {/* Live IST Clock Pill (Matches Image 1: ⏱ IST 02:33:17 pm) */}
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#071322] border border-cyan-900/60 text-slate-300 font-mono text-[11px] select-none">
+            {/* Live IST Clock Pill */}
+            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#071322] border border-cyan-900/60 text-slate-300 font-mono text-[11px] select-none">
               <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <span>IST {istTime}</span>
             </div>
 
-            {/* Language Switcher Pill (Matches Image 1: [ EN | தமிழ் ]) */}
-            <div className="flex items-center rounded-lg bg-[#071322] border border-cyan-900/60 p-0.5 text-[11px] font-semibold select-none">
+            {/* Language Switcher Pill */}
+            <div className="hidden sm:flex items-center rounded-lg bg-[#071322] border border-cyan-900/60 p-0.5 text-[11px] font-semibold select-none">
               <button
                 type="button"
                 onClick={() => setCurrentLang('en')}
@@ -226,15 +227,16 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             </div>
 
-            {/* Role Badge (Matches Image 1: ● ADMIN in Gold/Amber pill) */}
+            {/* Role Badge */}
             <button
               type="button"
               onClick={onOpenProfile}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#171206] border border-amber-600/70 text-[#fbbf24] hover:border-amber-400 font-mono text-[11px] font-bold tracking-wider cursor-pointer transition-colors shadow-[0_0_8px_rgba(245,158,11,0.2)]"
+              className="flex items-center gap-1 px-1.5 sm:px-2.5 py-1 rounded-lg bg-[#171206] border border-amber-600/70 text-[#fbbf24] hover:border-amber-400 font-mono text-[10px] sm:text-[11px] font-bold tracking-wider cursor-pointer transition-colors shadow-[0_0_8px_rgba(245,158,11,0.2)] shrink-0"
               title="Click to view/edit User Profile & Role"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b] animate-pulse" />
-              <span>● {roleName}</span>
+              <span className="hidden xs:inline">{roleName}</span>
+              <span className="xs:hidden">{roleName.slice(0, 3)}</span>
             </button>
 
             {/* Profile Avatar Button */}
@@ -262,7 +264,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Exit / Logout Button */}
             <button
               onClick={ownerEmail ? onLogout : onOpenLogin}
-              className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-800/80 transition-colors cursor-pointer"
+              className="p-1 sm:p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-800/80 transition-colors cursor-pointer shrink-0"
               title={ownerEmail ? 'Sign Out / Exit' : 'Login'}
             >
               <LogOut className="w-4 h-4" />
