@@ -519,7 +519,7 @@ export const PaymentCollectionModal: React.FC<PaymentCollectionModalProps> = ({
           <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 text-xs text-center space-y-1.5">
             <div className="font-semibold text-slate-300">All customer & loan data has been cleared (0 records).</div>
             <div className="text-[11px] text-cyan-400">
-              Go to "Active Loan Book" to issue a new loan, or use Settings to "Reset with Demo Data".
+              Go to "Active Loan Book" to issue a new customer loan agreement.
             </div>
           </div>
         )}

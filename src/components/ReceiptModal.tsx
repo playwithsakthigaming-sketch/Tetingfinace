@@ -22,10 +22,14 @@ import {
   Copy,
   Check,
   MessageCircle,
+  BookOpen,
+  ExternalLink,
+  Shield,
 } from 'lucide-react';
 import { Customer, Loan, Payment } from '../types/finance';
 import { formatIndianCurrency } from '../utils/financeCalculations';
 import { sendWhatsAppInvoice, formatWhatsAppInvoiceText } from '../utils/whatsappInvoice';
+import { financeStore } from '../services/financeStore';
 
 interface ReceiptModalProps {
   payment: Payment | null;
@@ -47,9 +51,18 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   loan,
 }) => {
   const [copied, setCopied] = useState(false);
+  const [passbookCopied, setPassbookCopied] = useState(false);
   const [showWhatsAppPreview, setShowWhatsAppPreview] = useState(false);
 
   if (!payment) return null;
+
+  // Retrieve or generate persistent passbook tracking token for this customer loan
+  const passbookToken = loan
+    ? (financeStore.getState().tokens.find((t) => t.loanId === loan.id && !t.isRevoked)?.token ||
+       financeStore.generatePassbookToken(loan.customerId, loan.id).token)
+    : null;
+
+  const passbookUrl = passbookToken ? `${window.location.origin}/?track=${passbookToken}` : undefined;
 
   const handlePrint = () => {
     window.print();
@@ -74,6 +87,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           ? loan.outstandingPrincipal + loan.outstandingInterest
           : loan.outstandingWeeklyDues
         : undefined,
+      passbookUrl,
     });
   };
 
@@ -83,6 +97,12 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
       customer,
       loan,
       coveredWeeksText: currentDueText,
+      remainingBalance: loan
+        ? loan.loanType === 'sp_interest_only'
+          ? loan.outstandingPrincipal + loan.outstandingInterest
+          : loan.outstandingWeeklyDues
+        : undefined,
+      passbookUrl,
     });
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -240,10 +260,70 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   customer,
                   loan,
                   coveredWeeksText: currentDueText,
+                  remainingBalance: loan
+                    ? loan.loanType === 'sp_interest_only'
+                      ? loan.outstandingPrincipal + loan.outstandingInterest
+                      : loan.outstandingWeeklyDues
+                    : undefined,
+                  passbookUrl,
                 })}
               </pre>
             )}
           </div>
+
+          {/* Customer Self-Service Passbook Card */}
+          {passbookUrl && (
+            <div className="p-3.5 rounded-xl bg-cyan-950/30 border border-cyan-500/40 flex flex-col gap-2.5 no-print">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center">
+                    <BookOpen className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-cyan-300 block">Customer Online Passbook</span>
+                    <span className="text-[10px] text-slate-400">
+                      Isolated Borrower View · Zero Login Required
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(passbookUrl);
+                      setPassbookCopied(true);
+                      setTimeout(() => setPassbookCopied(false), 3000);
+                    }}
+                    className="px-2.5 py-1 text-[11px] rounded-lg bg-cyan-950 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-900/60 flex items-center gap-1 transition-colors cursor-pointer"
+                    title="Copy Borrower Passbook Link"
+                  >
+                    {passbookCopied ? <Check className="w-3 h-3 text-cyan-400" /> : <Copy className="w-3 h-3" />}
+                    <span>{passbookCopied ? 'Link Copied!' : 'Copy Link'}</span>
+                  </button>
+
+                  <a
+                    href={passbookUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-2.5 py-1 text-[11px] rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1 transition-colors"
+                  >
+                    <ExternalLink className="w-3 h-3 text-cyan-400" />
+                    <span>Open Passbook</span>
+                  </a>
+                </div>
+              </div>
+
+              <div className="p-2 rounded-lg bg-black/40 border border-slate-800 text-[10px] font-mono text-cyan-400/90 truncate select-all">
+                {passbookUrl}
+              </div>
+
+              <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
+                <Shield className="w-3 h-3 text-emerald-400 shrink-0" />
+                <span>Strict privacy: Borrower sees only their loan. Other loans and admin desk remain hidden.</span>
+              </p>
+            </div>
+          )}
 
         </div>
 

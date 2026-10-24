@@ -60,22 +60,7 @@ export const ClearDataModal: React.FC<ClearDataModalProps> = ({
     }
   };
 
-  const handleSeedDemoData = async () => {
-    setIsClearing(true);
-    try {
-      await financeStore.seedDemoData();
-      setClearedSuccess(true);
-      setTimeout(() => {
-        setIsClearing(false);
-        setClearedSuccess(false);
-        onClose();
-        if (onCleared) onCleared();
-      }, 1000);
-    } catch (e) {
-      console.error('Failed to seed demo data', e);
-      setIsClearing(false);
-    }
-  };
+
 
   const isTypedClear = confirmInput.trim().toUpperCase() === 'CLEAR';
   // Allow clearing if user typed CLEAR, OR checked the confirmation box, OR clicks directly
@@ -186,27 +171,15 @@ export const ClearDataModal: React.FC<ClearDataModalProps> = ({
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-4 border-t border-slate-800">
+            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-800">
               <button
                 type="button"
-                onClick={handleSeedDemoData}
+                onClick={onClose}
                 disabled={isClearing}
-                className="w-full sm:w-auto px-3 py-2 text-[11px] font-semibold text-cyan-300 bg-cyan-950/50 hover:bg-cyan-900/60 border border-cyan-500/30 rounded-lg transition-colors flex items-center justify-center gap-1.5"
-                title="Populate sample customers and loans for demonstration"
+                className="px-3.5 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors"
               >
-                <Sparkles className="w-3.5 h-3.5" />
-                Reset with Demo Data
+                Cancel
               </button>
-
-              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  disabled={isClearing}
-                  className="px-3.5 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors"
-                >
-                  Cancel
-                </button>
                 <button
                   type="button"
                   onClick={handleExecuteClear}
@@ -222,7 +195,6 @@ export const ClearDataModal: React.FC<ClearDataModalProps> = ({
                 </button>
               </div>
             </div>
-          </div>
         )}
 
       </div>

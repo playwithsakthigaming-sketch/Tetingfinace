@@ -388,7 +388,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               {filteredLoans.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-8 text-center text-slate-400 font-medium text-xs">
-                    No loan contracts found. Issue a new customer loan or reset with demo data.
+                    No loan contracts found. Issue a new customer loan to get started.
                   </td>
                 </tr>
               ) : (

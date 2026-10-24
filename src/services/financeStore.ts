@@ -426,7 +426,7 @@ class FinanceStore {
   }
 
   private loadInitialState(): FinanceState {
-    const savedSession = typeof window !== 'undefined' ? localStorage.getItem('sri_sennamal_auth_session') : null;
+    const savedSession = typeof window !== 'undefined' ? sessionStorage.getItem('sri_sennamal_auth_session') : null;
     const initialEmail = savedSession || null;
 
     try {
@@ -480,19 +480,19 @@ class FinanceStore {
 
     return {
       businessInfo: DEFAULT_BUSINESS_INFO,
-      customers: INITIAL_CUSTOMERS,
-      loans: INITIAL_LOANS,
-      installments: INITIAL_INSTALLMENTS,
-      payments: INITIAL_PAYMENTS,
+      customers: [],
+      loans: [],
+      installments: [],
+      payments: [],
       refunds: [],
-      ledger: INITIAL_LEDGER,
-      tokens: INITIAL_TOKENS,
+      ledger: [],
+      tokens: [],
       auditLogs: [
         {
           id: 'audit-001',
           action: 'System Initialized',
           timestamp: new Date().toISOString(),
-          details: 'Sri Sennamal Finance core ledger started.',
+          details: 'Sri Sennamal Finance production ledger initialized.',
           userEmail: initialEmail || DESIGNATED_OWNER_EMAIL,
         },
       ],
@@ -1290,10 +1290,11 @@ class FinanceStore {
     this.state.currentUserEmail = email;
     if (typeof window !== 'undefined') {
       if (email) {
-        localStorage.setItem('sri_sennamal_auth_session', email);
+        sessionStorage.setItem('sri_sennamal_auth_session', email);
       } else {
-        localStorage.removeItem('sri_sennamal_auth_session');
+        sessionStorage.removeItem('sri_sennamal_auth_session');
       }
+      localStorage.removeItem('sri_sennamal_auth_session');
     }
     this.notify();
   }

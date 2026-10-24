@@ -244,7 +244,7 @@ export const LoanManagement: React.FC<LoanManagementProps> = ({
         <div className="rounded-2xl neon-card p-12 text-center text-slate-400 text-xs space-y-2">
           <p className="text-sm font-semibold text-slate-300">No active loans found on record.</p>
           <p className="text-slate-500">
-            Click "+ Issue New Loan" to create an agreement or reset with demo data.
+            Click "+ Issue New Loan" to create a new customer loan agreement.
           </p>
         </div>
       ) : (

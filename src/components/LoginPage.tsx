@@ -16,20 +16,26 @@ import {
   Sparkles,
   ArrowRight,
   RefreshCw,
+  Clock,
+  X,
+  Settings,
 } from 'lucide-react';
 import {
   DESIGNATED_OWNER_EMAIL,
   isAuthorizedOwner,
   getSupabaseClient,
   getActiveSupabaseConfig,
+  saveCustomSupabaseConfig,
+  testSupabaseConnection,
 } from '../services/supabase';
 
 interface LoginPageProps {
   onLoginSuccess: (email: string) => void;
   onOpenResetPage?: () => void;
+  afkNotice?: string | null;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenResetPage }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenResetPage, afkNotice }) => {
   // Auth state: strictly sign in or forgot password
   const [activeTab, setActiveTab] = useState<'signin' | 'forgot'>('signin');
   const [email, setEmail] = useState<string>(DESIGNATED_OWNER_EMAIL);
@@ -44,11 +50,48 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenRese
 
   // Supabase Configuration Status
   const [supabaseConfig, setSupabaseConfig] = useState(() => getActiveSupabaseConfig());
+  const [isConnectDbOpen, setIsConnectDbOpen] = useState<boolean>(false);
+  const [dbUrlInput, setDbUrlInput] = useState<string>('');
+  const [dbKeyInput, setDbKeyInput] = useState<string>('');
+  const [dbStatusMsg, setDbStatusMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [isTestingDb, setIsTestingDb] = useState<boolean>(false);
 
   // Refresh config state on mount
   useEffect(() => {
-    setSupabaseConfig(getActiveSupabaseConfig());
+    const cfg = getActiveSupabaseConfig();
+    setSupabaseConfig(cfg);
+    setDbUrlInput(cfg.url || '');
+    setDbKeyInput(cfg.anonKey || '');
   }, []);
+
+  const handleSaveDb = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setDbStatusMsg(null);
+    setIsTestingDb(true);
+
+    const test = await testSupabaseConnection(dbUrlInput, dbKeyInput);
+    if (!test.ok) {
+      setDbStatusMsg({ ok: false, text: test.message });
+      setIsTestingDb(false);
+      return;
+    }
+
+    const res = saveCustomSupabaseConfig(dbUrlInput, dbKeyInput);
+    if (!res.success) {
+      setDbStatusMsg({ ok: false, text: res.error || 'Failed to save config.' });
+      setIsTestingDb(false);
+      return;
+    }
+
+    const updated = getActiveSupabaseConfig();
+    setSupabaseConfig(updated);
+    setDbStatusMsg({ ok: true, text: 'Supabase cloud database connected successfully!' });
+    setIsTestingDb(false);
+    setTimeout(() => {
+      setIsConnectDbOpen(false);
+      setDbStatusMsg(null);
+    }, 1500);
+  };
 
   // Sign In Handler with Supabase Auth
   const handleSignIn = async (e: React.FormEvent) => {
@@ -187,22 +230,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenRese
           </div>
         </div>
 
-        {/* Supabase Status Pill */}
+        {/* Supabase Status & Connect DB Pill */}
         <div className="flex items-center gap-2">
-          <div
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono border ${
+          <button
+            type="button"
+            onClick={() => setIsConnectDbOpen(true)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-mono border transition-all cursor-pointer ${
               supabaseConfig.isConfigured
-                ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
-                : 'bg-amber-950/40 border-amber-500/40 text-amber-300'
+                ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/50'
+                : 'bg-amber-950/40 border-amber-500/40 text-amber-300 hover:bg-amber-900/50 shadow-[0_0_10px_rgba(245,158,11,0.2)]'
             }`}
+            title="Click to Connect or configure Supabase Database"
           >
             <Database className="w-3 h-3 shrink-0" />
             <span>
               {supabaseConfig.isConfigured
                 ? `Supabase: Connected (${supabaseConfig.source.toUpperCase()})`
-                : 'Supabase: Local / Offline'}
+                : 'Supabase: Offline (Click to Connect)'}
             </span>
-          </div>
+          </button>
         </div>
       </header>
 
@@ -260,6 +306,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenRese
               Reset Password
             </button>
           </div>
+
+          {/* AFK Auto-Logout Notice Banner */}
+          {afkNotice && (
+            <div className="mb-4 p-3 rounded-xl bg-amber-950/70 border border-amber-500/40 text-amber-300 text-xs flex items-start gap-2.5">
+              <Clock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div className="leading-relaxed">{afkNotice}</div>
+            </div>
+          )}
 
           {/* Error Banner */}
           {errorMessage && (
@@ -392,28 +446,110 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenRese
                   {isLoading ? 'Dispatching...' : 'Send Reset Link'}
                 </button>
               </div>
-
-              {/* Direct link to Set New Password screen */}
-              <div className="pt-3 border-t border-slate-800/80 text-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (onOpenResetPage) {
-                      onOpenResetPage();
-                    } else {
-                      window.location.hash = 'reset-password';
-                    }
-                  }}
-                  className="text-cyan-400 hover:text-cyan-300 hover:underline text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer"
-                >
-                  <span>Already received link? Open Reset Password Page →</span>
-                </button>
-              </div>
             </form>
           )}
 
         </div>
       </main>
+
+      {/* Connect Supabase Cloud DB Modal */}
+      {isConnectDbOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-[#0c1322] border border-cyan-500/40 rounded-2xl shadow-2xl p-6 relative text-slate-100">
+            <button
+              type="button"
+              onClick={() => setIsConnectDbOpen(false)}
+              className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-9 h-9 rounded-xl bg-cyan-950/60 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
+                <Database className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white font-display">Connect Supabase Cloud DB</h3>
+                <p className="text-[11px] text-slate-400">Configure project credentials for cloud authentication & sync</p>
+              </div>
+            </div>
+
+            {dbStatusMsg && (
+              <div
+                className={`mb-4 p-3 rounded-xl border text-xs flex items-start gap-2.5 ${
+                  dbStatusMsg.ok
+                    ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
+                    : 'bg-rose-950/60 border-rose-500/40 text-rose-300'
+                }`}
+              >
+                {dbStatusMsg.ok ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                )}
+                <span>{dbStatusMsg.text}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveDb} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                  Supabase Project URL
+                </label>
+                <input
+                  type="url"
+                  required
+                  placeholder="https://xyzcompany.supabase.co"
+                  value={dbUrlInput}
+                  onChange={(e) => setDbUrlInput(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono text-xs focus:border-cyan-400 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                  Supabase Anon (Public) Key
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  value={dbKeyInput}
+                  onChange={(e) => setDbKeyInput(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono text-[11px] focus:border-cyan-400 focus:outline-none resize-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsConnectDbOpen(false)}
+                  className="px-3 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isTestingDb}
+                  className="px-4 py-2 font-bold text-black bg-cyan-400 hover:bg-cyan-300 rounded-xl shadow transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {isTestingDb ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Testing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Database className="w-3.5 h-3.5" />
+                      <span>Save & Connect</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="relative z-10 w-full text-center py-4 text-xs text-slate-500 border-t border-slate-900 bg-[#070b14]/60">

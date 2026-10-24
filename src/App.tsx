@@ -77,6 +77,9 @@ export default function App() {
       if (!isMounted) return;
       if (event === 'PASSWORD_RECOVERY') {
         setIsResetPasswordOpen(true);
+        setIsPassbookInvalid(false);
+        setPassbookToken(null);
+        setPassbookData(null);
       }
       if (session?.user?.email && isAuthorizedOwner(session.user.email)) {
         financeStore.setOwnerSession(session.user.email);
@@ -89,6 +92,9 @@ export default function App() {
     };
   }, []);
 
+  // 5-Minute Inactivity (AFK Mode) Auto-Logout & Tab Close Protection
+  const [afkNotice, setAfkNotice] = useState<string | null>(null);
+
   const handleLogout = async () => {
     const client = getSupabaseClient();
     if (client) {
@@ -98,33 +104,107 @@ export default function App() {
         console.warn('Supabase sign out error:', err);
       }
     }
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('sri_sennamal_auth_session');
+    }
     financeStore.setOwnerSession(null);
   };
+
+  // AFK Inactivity Auto-Logout Effect (10 Minutes)
+  useEffect(() => {
+    if (!storeState.currentUserEmail) return;
+
+    let lastActivity = Date.now();
+    const AFK_LIMIT_MS = 10 * 60 * 1000; // 10 minutes
+
+    const recordActivity = () => {
+      lastActivity = Date.now();
+    };
+
+    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+    activityEvents.forEach((evt) => {
+      window.addEventListener(evt, recordActivity, { passive: true });
+    });
+
+    const intervalTimer = setInterval(() => {
+      const idleTime = Date.now() - lastActivity;
+      if (idleTime >= AFK_LIMIT_MS) {
+        clearInterval(intervalTimer);
+        setAfkNotice('Session expired: You have been automatically logged out due to 10 minutes of inactivity (AFK Mode).');
+        handleLogout();
+      }
+    }, 5000);
+
+    return () => {
+      activityEvents.forEach((evt) => {
+        window.removeEventListener(evt, recordActivity);
+      });
+      clearInterval(intervalTimer);
+    };
+  }, [storeState.currentUserEmail]);
+
+  // Tab Close / Window Close Protection
+  useEffect(() => {
+    const handleTabUnload = () => {
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('sri_sennamal_auth_session');
+      }
+    };
+
+    window.addEventListener('beforeunload', handleTabUnload);
+    window.addEventListener('pagehide', handleTabUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleTabUnload);
+      window.removeEventListener('pagehide', handleTabUnload);
+    };
+  }, []);
 
   // Inspect URL for public customer passbook token (?track=TOKEN or #track=TOKEN) or Supabase password reset link
   useEffect(() => {
     const handleUrlCheck = () => {
       const urlParams = new URLSearchParams(window.location.search);
-      let token = urlParams.get('track');
-
       const hash = window.location.hash || '';
       const search = window.location.search || '';
 
-      // Check if arriving via Supabase Password Recovery link
-      if (
+      // 1. Check if arriving via Supabase Password Recovery / Magic link / Reset link / Auth callback
+      const isRecovery =
         hash.includes('reset-password') ||
         hash.includes('type=recovery') ||
-        search.includes('type=recovery')
-      ) {
+        search.includes('type=recovery') ||
+        hash.includes('type=magiclink') ||
+        search.includes('type=magiclink') ||
+        (hash.includes('access_token=') && !hash.includes('track=')) ||
+        (search.includes('code=') && !urlParams.has('track')) ||
+        (hash.includes('error=') && (hash.includes('error_code=') || hash.includes('error_description=')));
+
+      if (isRecovery) {
         setIsResetPasswordOpen(true);
+        setPassbookToken(null);
+        setPassbookData(null);
+        setIsPassbookInvalid(false);
+        return; // Recovery link takes absolute precedence. Never check passbook for recovery links!
       }
 
-      if (!token && window.location.hash) {
-        const hashParams = new URLSearchParams(window.location.hash.replace('#', '?'));
-        token = hashParams.get('track') || window.location.hash.replace('#track=', '');
+      // 2. Strict Passbook Token extraction (ONLY from valid ?track=TOKEN or #track=TOKEN)
+      let token: string | null = urlParams.get('track');
+
+      if (!token && hash) {
+        if (hash.startsWith('#track=')) {
+          token = hash.replace('#track=', '').trim();
+        } else {
+          // If hash is structured as #?track=TOKEN or #param1=val&track=TOKEN
+          const cleanHash = hash.replace(/^[#?]+/, '');
+          const hashParams = new URLSearchParams(cleanHash);
+          const trackVal = hashParams.get('track');
+          if (trackVal) {
+            token = trackVal.trim();
+          }
+        }
       }
 
-      if (token) {
+      // Check for valid passbook token (must not be empty and must not look like an auth token payload)
+      if (token && !token.includes('access_token=') && !token.includes('type=') && !token.includes('code=')) {
         setPassbookToken(token);
         const data = financeStore.getPassbookDataByToken(token);
         if (data) {
@@ -180,7 +260,27 @@ export default function App() {
     ? formatCoveredWeeksSummary(activeReceiptPayment.allocations.coveredWeeks)
     : 'Weekly Due';
 
-  // If viewing public customer passbook, isolate interface completely
+  // 1. DEDICATED SUPABASE RESET PASSWORD PAGE (Absolute top priority over passbook and login)
+  if (isResetPasswordOpen) {
+    return (
+      <ResetPasswordPage
+        onBackToLogin={() => {
+          setIsResetPasswordOpen(false);
+          setIsPassbookInvalid(false);
+          setPassbookToken(null);
+          window.history.pushState({}, '', window.location.pathname);
+        }}
+        onSuccess={() => {
+          setIsResetPasswordOpen(false);
+          setIsPassbookInvalid(false);
+          setPassbookToken(null);
+          window.history.pushState({}, '', window.location.pathname);
+        }}
+      />
+    );
+  }
+
+  // 2. If viewing public customer passbook, isolate interface completely
   if (passbookToken || isPassbookInvalid) {
     return (
       <CustomerPassbookView
@@ -191,30 +291,16 @@ export default function App() {
     );
   }
 
-  // DEDICATED SUPABASE RESET PASSWORD PAGE
-  if (isResetPasswordOpen) {
-    return (
-      <ResetPasswordPage
-        onBackToLogin={() => {
-          setIsResetPasswordOpen(false);
-          window.history.pushState({}, '', window.location.pathname);
-        }}
-        onSuccess={() => {
-          setIsResetPasswordOpen(false);
-          window.history.pushState({}, '', window.location.pathname);
-        }}
-      />
-    );
-  }
-
   // FIRST: If owner is not logged in, show dedicated Supabase Login Page first!
   if (!storeState.currentUserEmail) {
     return (
       <LoginPage
         onLoginSuccess={(email) => {
+          setAfkNotice(null);
           financeStore.setOwnerSession(email);
         }}
         onOpenResetPage={() => setIsResetPasswordOpen(true)}
+        afkNotice={afkNotice}
       />
     );
   }

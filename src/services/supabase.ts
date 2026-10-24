@@ -22,8 +22,12 @@ export interface SupabaseConfig {
  * Retrieve active Supabase credentials from localStorage or environment variables
  */
 export function getActiveSupabaseConfig(): SupabaseConfig {
-  const customUrl = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_URL_KEY)?.trim() : null;
-  const customKey = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_ANON_KEY)?.trim() : null;
+  const customUrl = typeof window !== 'undefined'
+    ? (localStorage.getItem(STORAGE_URL_KEY)?.trim() || sessionStorage.getItem(STORAGE_URL_KEY)?.trim() || null)
+    : null;
+  const customKey = typeof window !== 'undefined'
+    ? (localStorage.getItem(STORAGE_ANON_KEY)?.trim() || sessionStorage.getItem(STORAGE_ANON_KEY)?.trim() || null)
+    : null;
 
   if (customUrl && customKey && customUrl.startsWith('https://')) {
     return {
@@ -63,6 +67,7 @@ function initializeClient(): SupabaseClient | null {
     try {
       activeClient = createClient(currentConfig.url, currentConfig.anonKey, {
         auth: {
+          storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: true,
@@ -109,6 +114,10 @@ export function saveCustomSupabaseConfig(url: string, anonKey: string): { succes
 
     localStorage.setItem(STORAGE_URL_KEY, cleanUrl);
     localStorage.setItem(STORAGE_ANON_KEY, cleanKey);
+    try {
+      sessionStorage.setItem(STORAGE_URL_KEY, cleanUrl);
+      sessionStorage.setItem(STORAGE_ANON_KEY, cleanKey);
+    } catch (_) {}
     initializeClient();
 
     return { success: true };
@@ -123,6 +132,10 @@ export function saveCustomSupabaseConfig(url: string, anonKey: string): { succes
 export function clearCustomSupabaseConfig(): void {
   localStorage.removeItem(STORAGE_URL_KEY);
   localStorage.removeItem(STORAGE_ANON_KEY);
+  try {
+    sessionStorage.removeItem(STORAGE_URL_KEY);
+    sessionStorage.removeItem(STORAGE_ANON_KEY);
+  } catch (_) {}
   initializeClient();
 }
 

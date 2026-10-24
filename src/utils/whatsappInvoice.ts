@@ -14,6 +14,7 @@ export interface WhatsAppInvoiceParams {
   coveredWeeksText?: string;
   remainingBalance?: number;
   nextDueDate?: string;
+  passbookUrl?: string;
 }
 
 /**
@@ -37,7 +38,7 @@ export function cleanPhoneNumber(rawPhone: string): string {
  * Format bilingual Tamil + English WhatsApp Invoice Text
  */
 export function formatWhatsAppInvoiceText(params: WhatsAppInvoiceParams): string {
-  const { payment, customer, loan, coveredWeeksText, remainingBalance, nextDueDate } = params;
+  const { payment, customer, loan, coveredWeeksText, remainingBalance, nextDueDate, passbookUrl } = params;
 
   const receiptNo = payment.receiptNo;
   const dateStr = new Date(payment.paymentDate).toLocaleDateString('en-IN', {
@@ -81,6 +82,10 @@ export function formatWhatsAppInvoiceText(params: WhatsAppInvoiceParams): string
 
   const nextDue = nextDueDate || (loan ? 'Upcoming Sunday' : 'As per schedule');
 
+  const passbookBlock = passbookUrl
+    ? `\n📱 *Your Loan Passbook / உங்கள் பாஸ்புக்:*\n🔗 ${passbookUrl}\n_(Login இல்லாம உங்கள் லோன் விவரங்கள் மட்டும் பார்க்க கிளிக் செய்யவும்)_\n━━━━━━━━━━━━━━━━━━━━\n`
+    : '';
+
   return (
 `🏛️ *SRI SENNAMAL FINANCE*
 *ஸ்ரீ சென்னமால் பைனான்ஸ்*
@@ -104,7 +109,7 @@ _Official Payment Receipt / கட்டண ரசீது_
 ━━━━━━━━━━━━━━━━━━━━
 📉 *Remaining Balance:* *${remBalText}*
 📆 *Next Due Date:* ${nextDue}
-━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━${passbookBlock}
 🙏 _நன்றி! எங்களை தொடர்பு கொள்ள:_
 📞 *Helpline / உதவி எண்:* +91 7812834522
 📍 Coimbatore Central, Tamil Nadu

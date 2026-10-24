@@ -40,46 +40,46 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   return (
     <header className="sticky top-0 z-40 bg-[#070b14]/95 backdrop-blur-md border-b border-slate-800/80">
-      <div className="w-full px-3 sm:px-6">
-        <div className="flex items-center justify-between h-16 gap-2 sm:gap-4">
+      <div className="w-full px-2 sm:px-6">
+        <div className="flex items-center justify-between h-14 sm:h-16 gap-1.5 sm:gap-4">
           
           {/* Left: Hamburger & Brand Lockup */}
-          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 flex-1">
             {/* Hamburger Button */}
             <button
               onClick={onToggleSidebar}
-              className="p-1.5 text-cyan-400 hover:text-white rounded-lg hover:bg-slate-800/60 transition-colors"
+              className="p-1 sm:p-1.5 text-cyan-400 hover:text-white rounded-lg hover:bg-slate-800/60 transition-colors shrink-0 cursor-pointer"
               title="Open Navigation Menu"
             >
               <Menu className="w-5 h-5" />
             </button>
 
             {/* SSF FINANCE Gold Square Badge */}
-            <div className="relative flex flex-col items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-b from-[#1a1505] to-[#0a0802] border border-[#d97706]/70 shadow-[0_0_12px_rgba(217,119,6,0.25)] select-none">
-              <span className="text-[10px] sm:text-[11px] font-black tracking-wider text-[#fbbf24] leading-none">
+            <div className="relative shrink-0 flex flex-col items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-b from-[#1a1505] to-[#0a0802] border border-[#d97706]/70 shadow-[0_0_12px_rgba(217,119,6,0.25)] select-none">
+              <span className="text-[9px] sm:text-[11px] font-black tracking-wider text-[#fbbf24] leading-none">
                 SSF
               </span>
-              <span className="text-[6.5px] sm:text-[7.5px] font-bold tracking-widest text-[#f59e0b] leading-tight mt-0.5">
+              <span className="text-[5.5px] sm:text-[7.5px] font-bold tracking-widest text-[#f59e0b] leading-tight mt-0.5">
                 FINANCE
               </span>
             </div>
 
             {/* Brand Title and Tagline */}
-            <div className="flex flex-col">
-              <span className="text-sm sm:text-base font-bold tracking-wider text-[#f59e0b] font-display uppercase leading-tight">
+            <div className="flex flex-col min-w-0 truncate">
+              <span className="text-xs sm:text-base font-bold tracking-wider text-[#f59e0b] font-display uppercase leading-tight truncate">
                 SRI SENNAMAL FINANCE
               </span>
-              <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-slate-400 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
-                <span className="text-[#a3e635]/90">Weekly Microfinance</span>
-                <span className="text-slate-500">·</span>
-                <span className="text-slate-400 hidden xs:inline">Tamil Nadu, India</span>
+              <div className="flex items-center gap-1 text-[9px] sm:text-[11px] text-slate-400 font-medium truncate">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse shrink-0" />
+                <span className="text-[#a3e635]/90 truncate">Weekly Microfinance</span>
+                <span className="text-slate-500 hidden sm:inline">·</span>
+                <span className="text-slate-400 hidden sm:inline">Tamil Nadu, India</span>
               </div>
             </div>
           </div>
 
           {/* Right Controls: Auto Save Pill, [+ New Collection], Admin Badge, Switch to Agent, Logout */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             
             {/* Auto Save Pill */}
             <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-medium border border-cyan-500/40 bg-cyan-950/30 text-cyan-300">
@@ -112,9 +112,9 @@ export const Header: React.FC<HeaderProps> = ({
             {/* [+ New Collection] Bright Cyan Button */}
             <button
               onClick={onOpenNewCollection}
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 text-xs font-bold text-black bg-[#00e5ff] hover:bg-[#38bdf8] rounded-lg shadow-[0_0_15px_rgba(0,229,255,0.4)] transition-all whitespace-nowrap active:scale-95"
+              className="flex items-center gap-1 px-2.5 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold text-black bg-[#00e5ff] hover:bg-[#38bdf8] rounded-lg shadow-[0_0_15px_rgba(0,229,255,0.4)] transition-all whitespace-nowrap active:scale-95 cursor-pointer"
             >
-              <Plus className="w-4 h-4 stroke-[3]" />
+              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[3]" />
               <span className="hidden sm:inline">New Collection</span>
               <span className="sm:hidden">Collection</span>
             </button>
@@ -133,7 +133,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* [⇄ Switch to Agent] Button */}
             <button
               onClick={() => onSelectTab('collections')}
-              className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 bg-slate-900/80 hover:bg-slate-800 border border-cyan-500/30 rounded-lg transition-colors whitespace-nowrap"
+              className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 bg-slate-900/80 hover:bg-slate-800 border border-cyan-500/30 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
               title="Quick switch to collection desk"
             >
               <Repeat className="w-3.5 h-3.5 text-cyan-400" />
@@ -143,7 +143,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Logout / Exit Icon Button */}
             <button
               onClick={ownerEmail ? onLogout : onOpenLogin}
-              className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800/80 transition-colors"
+              className="p-1.5 sm:p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800/80 transition-colors cursor-pointer"
               title={ownerEmail ? 'Logout Owner' : 'Owner Login'}
             >
               <LogOut className="w-4 h-4" />
