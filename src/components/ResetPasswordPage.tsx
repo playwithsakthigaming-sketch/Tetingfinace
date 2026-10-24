@@ -30,17 +30,22 @@ import {
   getActiveSupabaseConfig,
   saveCustomSupabaseConfig,
   testSupabaseConnection,
+  subscribeToSupabaseHealth,
+  ConnectionHealth,
+  runHealthCheck,
 } from '../services/supabase';
+import { financeStore } from '../services/financeStore';
 
 interface ResetPasswordPageProps {
   onBackToLogin: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (email?: string) => void;
 }
 
 export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({
   onBackToLogin,
   onSuccess,
 }) => {
+  const [resetEmail, setResetEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [otpCode, setOtpCode] = useState('');
@@ -58,11 +63,30 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const [supabaseConfig, setSupabaseConfig] = useState(() => getActiveSupabaseConfig());
+  const [dbHealth, setDbHealth] = useState<ConnectionHealth>({
+    status: getActiveSupabaseConfig().isConfigured ? 'connecting' : 'offline',
+    isConfigured: getActiveSupabaseConfig().isConfigured,
+    url: getActiveSupabaseConfig().url,
+    latencyMs: null,
+    lastPingAt: null,
+    consecutiveFailures: 0,
+    errorMessage: null,
+  });
+
   const [isConnectDbOpen, setIsConnectDbOpen] = useState(false);
   const [dbUrlInput, setDbUrlInput] = useState(() => getActiveSupabaseConfig().url || '');
   const [dbKeyInput, setDbKeyInput] = useState(() => getActiveSupabaseConfig().anonKey || '');
   const [dbStatusMsg, setDbStatusMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [isTestingDb, setIsTestingDb] = useState(false);
+
+  // Subscribe to live connection health
+  useEffect(() => {
+    const unsubscribe = subscribeToSupabaseHealth((health) => {
+      setDbHealth(health);
+      setSupabaseConfig(getActiveSupabaseConfig());
+    });
+    return unsubscribe;
+  }, []);
 
   const handleSaveDb = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,12 +109,13 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({
 
     const updated = getActiveSupabaseConfig();
     setSupabaseConfig(updated);
-    setDbStatusMsg({ ok: true, text: 'Supabase Database connected successfully!' });
+    setDbStatusMsg({ ok: true, text: 'Supabase Database connected successfully and kept stably online!' });
     setIsTestingDb(false);
+    runHealthCheck();
+
     setTimeout(() => {
       setIsConnectDbOpen(false);
       setDbStatusMsg(null);
-      window.location.reload();
     }, 1200);
   };
 
@@ -131,6 +156,9 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({
           const { data, error } = await client.auth.exchangeCodeForSession(code);
           if (data?.session && isMounted) {
             setHasActiveSession(true);
+            if (data.session.user?.email) {
+              setResetEmail(data.session.user.email);
+            }
             setSuccessMessage('Recovery session verified from link! Enter your new password below.');
             setIsCheckingSession(false);
             return;
@@ -152,6 +180,9 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({
             });
             if (!error && data?.session && isMounted) {
               setHasActiveSession(true);
+              if (data.session.user?.email) {
+                setResetEmail(data.session.user.email);
+              }
               setSuccessMessage('Recovery session verified from link! Enter your new password below.');
               setIsCheckingSession(false);
               return;
@@ -163,6 +194,9 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({
         const { data: { session } } = await client.auth.getSession();
         if (session && isMounted) {
           setHasActiveSession(true);
+          if (session.user?.email) {
+            setResetEmail(session.user.email);
+          }
         } else if (isMounted) {
           // If no session exists, show OTP input so user can verify via code or link
           setShowOtpField(true);
@@ -181,6 +215,9 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({
       if (!isMounted) return;
       if (session && (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN' || event === 'USER_UPDATED')) {
         setHasActiveSession(true);
+        if (session.user?.email) {
+          setResetEmail(session.user.email);
+        }
         setSuccessMessage('Recovery session verified! Enter your new password below.');
       }
     });
@@ -191,27 +228,26 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({
     };
   }, []);
 
-  // Resend reset link or code to owner email
+  // Resend reset link or code to target email
   const handleResendResetLink = async () => {
     setIsResending(true);
     setErrorMessage(null);
     setSuccessMessage(null);
 
+    const targetEmail = resetEmail.trim().toLowerCase() || DESIGNATED_OWNER_EMAIL;
     const client = getSupabaseClient();
     try {
       if (client && supabaseConfig.isConfigured) {
         const redirectUrl = `${window.location.origin}/#reset-password`;
-        const { error } = await client.auth.resetPasswordForEmail(DESIGNATED_OWNER_EMAIL, {
+        const { error } = await client.auth.resetPasswordForEmail(targetEmail, {
           redirectTo: redirectUrl,
         });
 
         if (error) throw error;
-        setSuccessMessage(`New reset link & verification code sent to ${DESIGNATED_OWNER_EMAIL}. Check inbox.`);
+        setSuccessMessage(`New reset link & verification code sent to ${targetEmail}. Check inbox.`);
         setShowOtpField(true);
       } else {
-        await new Promise((r) => setTimeout(r, 400));
-        setSuccessMessage(`Reset code dispatched to ${DESIGNATED_OWNER_EMAIL}.`);
-        setShowOtpField(true);
+        setErrorMessage('Supabase database is offline. Please click "Connect DB" above.');
       }
     } catch (err: any) {
       setErrorMessage(err?.message || 'Failed to dispatch reset email.');
@@ -243,8 +279,9 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({
         // If no active session, but user provided an OTP code from email
         if (!hasActiveSession && otpCode.trim()) {
           const cleanOtp = otpCode.trim();
+          const targetEmail = resetEmail.trim().toLowerCase() || DESIGNATED_OWNER_EMAIL;
           const { data: verifyData, error: verifyError } = await client.auth.verifyOtp({
-            email: DESIGNATED_OWNER_EMAIL,
+            email: targetEmail,
             token: cleanOtp,
             type: 'recovery',
           });
@@ -257,11 +294,14 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({
 
           if (verifyData.session) {
             setHasActiveSession(true);
+            if (verifyData.session.user?.email) {
+              setResetEmail(verifyData.session.user.email);
+            }
           }
         }
 
-        // Now update password
-        const { error } = await client.auth.updateUser({
+        // Now update password directly in Supabase
+        const { data: updateData, error } = await client.auth.updateUser({
           password: newPassword,
         });
 
@@ -279,25 +319,22 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({
           return;
         }
 
-        setSuccessMessage('Password successfully updated in Supabase! Redirecting to login...');
+        // Successfully updated in Supabase! Set session directly and log in
+        const userEmail = updateData?.user?.email || resetEmail || DESIGNATED_OWNER_EMAIL;
+        financeStore.setOwnerSession(userEmail);
+
+        setSuccessMessage('Password successfully updated in Supabase! Opening management portal...');
         setTimeout(() => {
           if (onSuccess) {
-            onSuccess();
+            onSuccess(userEmail);
           } else {
             onBackToLogin();
           }
-        }, 1500);
+        }, 1200);
       } else {
-        // Local mode fallback
-        await new Promise((resolve) => setTimeout(resolve, 400));
-        setSuccessMessage('Password successfully updated! Redirecting to login...');
-        setTimeout(() => {
-          if (onSuccess) {
-            onSuccess();
-          } else {
-            onBackToLogin();
-          }
-        }, 1500);
+        // Do not fake success if database is offline!
+        setErrorMessage('Supabase database is offline or not connected. Please click "Connect DB" above to update your credentials in the cloud database.');
+        setIsLoading(false);
       }
     } catch (err: any) {
       if (err?.message?.toLowerCase().includes('session')) {
@@ -351,16 +388,29 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({
             type="button"
             onClick={() => setIsConnectDbOpen(true)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-mono border transition-all cursor-pointer ${
-              supabaseConfig.isConfigured
+              dbHealth.status === 'online'
                 ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/50'
+                : dbHealth.status === 'connecting'
+                ? 'bg-cyan-950/40 border-cyan-500/40 text-cyan-300 hover:bg-cyan-900/50'
                 : 'bg-amber-950/40 border-amber-500/40 text-amber-300 hover:bg-amber-900/50 shadow-[0_0_10px_rgba(245,158,11,0.2)]'
             }`}
-            title="Click to Connect or configure Supabase Database"
+            title="Click to Connect or view Supabase Database Health"
           >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                dbHealth.status === 'online'
+                  ? 'bg-emerald-400 animate-pulse'
+                  : dbHealth.status === 'connecting'
+                  ? 'bg-cyan-400 animate-spin'
+                  : 'bg-amber-400'
+              }`}
+            />
             <Database className="w-3 h-3 shrink-0" />
             <span>
-              {supabaseConfig.isConfigured
-                ? `Supabase: Connected (${supabaseConfig.source.toUpperCase()})`
+              {dbHealth.status === 'online'
+                ? `Supabase: Online (${dbHealth.latencyMs ? `${dbHealth.latencyMs}ms` : 'Connected'})`
+                : dbHealth.status === 'connecting'
+                ? 'Supabase: Connecting...'
                 : 'Supabase: Offline (Click to Connect)'}
             </span>
           </button>
@@ -390,15 +440,15 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({
               புதிய கடவுச்சொல் அமைத்தல்
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-white font-display tracking-tight">
-              Reset Owner Password
+              Reset Password
             </h2>
             <p className="text-xs text-slate-400 mt-1">
-              Set new master password for <span className="text-slate-300 font-mono">{DESIGNATED_OWNER_EMAIL}</span>
+              Set new password {resetEmail ? <span>for <strong className="text-slate-300 font-mono">{resetEmail}</strong></span> : 'for your account'}
             </p>
           </div>
 
           {/* Database Offline Alert & Quick Connect */}
-          {!supabaseConfig.isConfigured && (
+          {dbHealth.status === 'offline' && (
             <div className="mb-4 p-3.5 rounded-2xl bg-amber-950/40 border border-amber-500/40 text-amber-200 text-xs space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-amber-300 flex items-center gap-1.5">
@@ -454,9 +504,16 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({
                 </button>
               </div>
               <p className="text-[11px] text-amber-200/80 leading-snug">
-                Enter the 6-digit code or link token received at <strong className="font-mono text-white">{DESIGNATED_OWNER_EMAIL}</strong> to authorize password change.
+                Enter your account email and the 6-digit verification code from your email to authorize password change:
               </p>
               <div>
+                <input
+                  type="email"
+                  placeholder="Enter Email Address"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-900 border border-amber-500/40 rounded-xl text-white font-mono text-xs focus:border-cyan-400 focus:outline-none mb-2"
+                />
                 <input
                   type="text"
                   placeholder="e.g. 123456 (or token from email)"

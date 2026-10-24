@@ -25,7 +25,7 @@ import {
   generateDailySchedule,
   PENALTY_AMOUNT,
 } from '../utils/financeCalculations';
-import { DESIGNATED_OWNER_EMAIL } from './supabase';
+import { DESIGNATED_OWNER_EMAIL, runHealthCheck } from './supabase';
 
 const STORAGE_KEY = 'sri_sennamal_finance_store_v1';
 const RECOVERY_STORAGE_KEY = 'sri_sennamal_finance_recovery_v1';
@@ -545,6 +545,10 @@ class FinanceStore {
       this.state.autoSaveStatus = 'saved';
       this.state.lastSavedAt = new Date().toISOString();
       this.notify();
+
+      // Non-blocking background health check to maintain warm Supabase connection
+      runHealthCheck().catch(() => {});
+
       return true;
     } catch (err) {
       console.error('AutoSave failed:', err);

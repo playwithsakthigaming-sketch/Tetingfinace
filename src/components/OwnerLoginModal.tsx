@@ -30,7 +30,7 @@ export const OwnerLoginModal: React.FC<OwnerLoginModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const [email, setEmail] = useState(DESIGNATED_OWNER_EMAIL);
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -47,14 +47,14 @@ export const OwnerLoginModal: React.FC<OwnerLoginModalProps> = ({
     const cleanEmail = email.trim().toLowerCase();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    // Enforce designated owner identity verification
-    if (!cleanEmail || !emailRegex.test(cleanEmail) || !isAuthorizedOwner(cleanEmail)) {
-      setErrorMessage('Invalid email address');
+    // Validate email format
+    if (!cleanEmail || !emailRegex.test(cleanEmail)) {
+      setErrorMessage('Please enter a valid email address');
       return;
     }
 
     if (!password) {
-      setErrorMessage('Incorrect password or email');
+      setErrorMessage('Please enter your password');
       return;
     }
 
@@ -69,27 +69,28 @@ export const OwnerLoginModal: React.FC<OwnerLoginModalProps> = ({
         });
 
         if (error) {
-          setErrorMessage('Incorrect password or email');
+          setErrorMessage(error.message || 'Incorrect password or email');
           setIsLoading(false);
           return;
         }
 
-        if (data.user && !isAuthorizedOwner(data.user.email)) {
-          await supabase.auth.signOut();
-          setErrorMessage('Invalid email address');
-          setIsLoading(false);
+        if (data.user) {
+          onSuccess(data.user.email || cleanEmail);
+          onClose();
           return;
         }
       } else {
         // Local fallback authentication
-        await new Promise((resolve) => setTimeout(resolve, 400));
-        // Allow owner sign in
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        onSuccess(cleanEmail);
+        onClose();
+        return;
       }
 
       onSuccess(cleanEmail);
       onClose();
     } catch (err: any) {
-      setErrorMessage('Incorrect password or email');
+      setErrorMessage(err?.message || 'Incorrect password or email');
     } finally {
       setIsLoading(false);
     }
@@ -164,20 +165,18 @@ export const OwnerLoginModal: React.FC<OwnerLoginModalProps> = ({
           /* Login Form */
           <form onSubmit={handleLoginSubmit} className="mt-4 space-y-4 text-xs">
             <div>
-              <label className="block text-slate-400 mb-1 font-semibold">Owner Email Address *</label>
+              <label className="block text-slate-400 mb-1 font-semibold">Email Address *</label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="email"
                   required
+                  placeholder="Enter Email Address"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-9 pr-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-cyan-400"
                 />
               </div>
-              <span className="text-[10px] text-slate-500 mt-0.5 block">
-                Designated owner: playwithsakthigaming@gmail.com
-              </span>
             </div>
 
             <div>
@@ -187,7 +186,7 @@ export const OwnerLoginModal: React.FC<OwnerLoginModalProps> = ({
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
-                  placeholder="••••••••••••"
+                  placeholder="Enter Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-9 pr-10 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-cyan-400"

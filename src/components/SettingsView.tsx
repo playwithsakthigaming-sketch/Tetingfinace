@@ -5,7 +5,7 @@
  * and Cloud Database Connection (Supabase Connect DB).
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Settings,
   ShieldCheck,
@@ -25,21 +25,33 @@ import {
   Sliders,
   CheckCircle2,
   Lock,
+  User,
+  Users,
+  UserPlus,
+  Shield,
+  Trash2,
+  Sparkles,
+  ChevronDown,
 } from 'lucide-react';
-import { BusinessInfo } from '../types/finance';
+import { BusinessInfo, UserProfile, UserRole, ROLE_LABELS, ROLE_PERMISSIONS } from '../types/finance';
 import {
   getActiveSupabaseConfig,
   saveCustomSupabaseConfig,
   clearCustomSupabaseConfig,
   testSupabaseConnection,
+  subscribeToSupabaseHealth,
+  ConnectionHealth,
+  runHealthCheck,
   SupabaseConfig,
 } from '../services/supabase';
+import { userService, subscribeToUserProfiles } from '../services/userService';
 
 interface SettingsViewProps {
   businessInfo: BusinessInfo;
   onUpdateBusinessInfo: (info: Partial<BusinessInfo>) => void;
   ownerEmail: string | null;
   onOpenClearData?: () => void;
+  onOpenProfile?: () => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -47,6 +59,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onUpdateBusinessInfo,
   ownerEmail,
   onOpenClearData,
+  onOpenProfile,
 }) => {
   // Business Info form state
   const [companyName, setCompanyName] = useState(businessInfo.companyName);
@@ -57,13 +70,114 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [licenceVerified, setLicenceVerified] = useState(businessInfo.licenceVerified);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Supabase Connect DB state
+  // Supabase Connect DB state & live health monitor
   const [supabaseConfig, setSupabaseConfig] = useState<SupabaseConfig>(() => getActiveSupabaseConfig());
+  const [dbHealth, setDbHealth] = useState<ConnectionHealth>({
+    status: getActiveSupabaseConfig().isConfigured ? 'connecting' : 'offline',
+    isConfigured: getActiveSupabaseConfig().isConfigured,
+    url: getActiveSupabaseConfig().url,
+    latencyMs: null,
+    lastPingAt: null,
+    consecutiveFailures: 0,
+    errorMessage: null,
+  });
   const [dbUrl, setDbUrl] = useState(supabaseConfig.url || '');
   const [dbKey, setDbKey] = useState(supabaseConfig.anonKey || '');
   const [isTestingDb, setIsTestingDb] = useState(false);
-  const [dbTestResult, setDbTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [dbTestResult, setDbTestResult] = useState<{ ok: boolean; message: string; latencyMs?: number } | null>(null);
   const [dbSaveMessage, setDbSaveMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Team & User Roles state
+  const [profiles, setProfiles] = useState<UserProfile[]>(() => userService.getAllProfiles());
+  const [isSyncingUsers, setIsSyncingUsers] = useState(false);
+  const [syncUserFeedback, setSyncUserFeedback] = useState<{ ok: boolean; message: string } | null>(null);
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [newMemberName, setNewMemberName] = useState('');
+  const [newMemberPhone, setNewMemberPhone] = useState('');
+  const [newMemberRole, setNewMemberRole] = useState<UserRole>('collection_team');
+  const [addMemberFeedback, setAddMemberFeedback] = useState<{ ok: boolean; message: string } | null>(null);
+  const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all');
+
+  // Subscribe to live connection health and user profile changes
+  useEffect(() => {
+    const unsubscribeDb = subscribeToSupabaseHealth((health) => {
+      setDbHealth(health);
+      const cfg = getActiveSupabaseConfig();
+      setSupabaseConfig(cfg);
+    });
+
+    const unsubscribeProfiles = subscribeToUserProfiles(() => {
+      setProfiles(userService.getAllProfiles());
+    });
+
+    return () => {
+      unsubscribeDb();
+      unsubscribeProfiles();
+    };
+  }, []);
+
+  // Sync users with Supabase
+  const handleSyncUsers = async () => {
+    setIsSyncingUsers(true);
+    setSyncUserFeedback(null);
+    try {
+      const res = await userService.syncWithSupabase();
+      setSyncUserFeedback({
+        ok: res.success,
+        message: res.message,
+      });
+      setProfiles(userService.getAllProfiles());
+    } catch (err: any) {
+      setSyncUserFeedback({
+        ok: false,
+        message: err?.message || 'Error syncing users with Supabase.',
+      });
+    } finally {
+      setIsSyncingUsers(false);
+      setTimeout(() => {
+        setSyncUserFeedback((prev) => (prev?.ok ? null : prev));
+      }, 6000);
+    }
+  };
+
+  // Change user role
+  const handleRoleChange = async (targetEmail: string, newRole: UserRole) => {
+    await userService.saveProfile(targetEmail, { role: newRole });
+    setProfiles(userService.getAllProfiles());
+  };
+
+  // Add new team member
+  const handleAddMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddMemberFeedback(null);
+    const res = await userService.addNewMember(
+      newMemberEmail,
+      newMemberName,
+      newMemberRole,
+      newMemberPhone
+    );
+    setAddMemberFeedback({ ok: res.success, message: res.message });
+    if (res.success) {
+      setNewMemberEmail('');
+      setNewMemberName('');
+      setNewMemberPhone('');
+      setNewMemberRole('collection_team');
+      setProfiles(userService.getAllProfiles());
+      setTimeout(() => {
+        setIsAddUserModalOpen(false);
+        setAddMemberFeedback(null);
+      }, 1500);
+    }
+  };
+
+  // Delete member
+  const handleDeleteMember = (targetEmail: string) => {
+    if (window.confirm(`Are you sure you want to remove team member ${targetEmail}?`)) {
+      userService.deleteMember(targetEmail);
+      setProfiles(userService.getAllProfiles());
+    }
+  };
 
   // SQL Migration Modal state
   const [isSqlModalOpen, setIsSqlModalOpen] = useState(false);
@@ -172,23 +286,44 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
 
           {/* Connection Status Pill */}
-          <div
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono font-medium border ${
-              supabaseConfig.isConfigured
-                ? 'bg-emerald-950/50 border-emerald-500/50 text-emerald-300'
-                : 'bg-amber-950/50 border-amber-500/50 text-amber-300'
-            }`}
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${
-                supabaseConfig.isConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+          <div className="flex items-center gap-2">
+            <div
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono font-medium border ${
+                dbHealth.status === 'online'
+                  ? 'bg-emerald-950/50 border-emerald-500/50 text-emerald-300'
+                  : dbHealth.status === 'connecting'
+                  ? 'bg-cyan-950/50 border-cyan-500/50 text-cyan-300'
+                  : 'bg-amber-950/50 border-amber-500/50 text-amber-300'
               }`}
-            />
-            <span>
-              {supabaseConfig.isConfigured
-                ? `Cloud DB Connected (${supabaseConfig.source.toUpperCase()})`
-                : 'Local Offline Storage Mode'}
-            </span>
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  dbHealth.status === 'online'
+                    ? 'bg-emerald-400 animate-pulse'
+                    : dbHealth.status === 'connecting'
+                    ? 'bg-cyan-400 animate-spin'
+                    : 'bg-amber-400'
+                }`}
+              />
+              <span>
+                {dbHealth.status === 'online'
+                  ? `Cloud DB Online (${dbHealth.latencyMs ? `${dbHealth.latencyMs}ms` : 'Connected'})`
+                  : dbHealth.status === 'connecting'
+                  ? 'Waking / Reconnecting...'
+                  : 'Local Offline Storage Mode'}
+              </span>
+            </div>
+
+            {dbHealth.isConfigured && (
+              <button
+                type="button"
+                onClick={() => runHealthCheck()}
+                className="p-1.5 rounded-lg bg-slate-900 border border-slate-700 hover:border-cyan-500/40 text-slate-300 hover:text-cyan-300 transition-colors cursor-pointer"
+                title="Trigger immediate health ping / keep-alive probe"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -464,35 +599,434 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
 
-        {/* Owner Authorization Overview */}
-        <div className="p-6 rounded-2xl neon-card space-y-3">
-          <div className="pb-3 border-b border-slate-800">
-            <h3 className="text-base font-bold text-white font-display">
-              Owner Security & Architecture
-            </h3>
-            <span className="text-[11px] text-slate-400">Single designated owner identity.</span>
+        {/* ======================================================== */}
+        {/* 4. TEAM MEMBERS, SUPABASE SYNC & ROLE-BASED ACCESS (RBAC) */}
+        {/* ======================================================== */}
+        <div className="p-6 rounded-2xl neon-card space-y-4 border border-cyan-500/30 bg-[#090e1a]/95">
+          <div className="pb-3 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-purple-950/60 border border-purple-500/40 flex items-center justify-center text-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.25)]">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white font-display flex items-center gap-2">
+                  Team Members & Supabase Users Sync
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  Manage staff roles: <strong>Administrator</strong>, <strong>Manager</strong>, and <strong>Collection Team</strong> with role-based permissions.
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Action Buttons */}
+            <div className="flex flex-wrap items-center gap-2">
+              {onOpenProfile && (
+                <button
+                  type="button"
+                  onClick={onOpenProfile}
+                  className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 hover:border-cyan-500/50 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <User className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>My Profile</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleSyncUsers}
+                disabled={isSyncingUsers}
+                className="px-3 py-1.5 rounded-xl bg-cyan-950/70 border border-cyan-500/50 hover:bg-cyan-900/60 text-cyan-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                title="Sync users and profiles with Supabase Cloud Database"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncingUsers ? 'animate-spin text-cyan-400' : ''}`} />
+                <span>{isSyncingUsers ? 'Syncing...' : 'Sync Supabase Users'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsAddUserModalOpen(true)}
+                className="px-3 py-1.5 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-black text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-[0_0_12px_rgba(6,182,212,0.3)]"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>Add Member</span>
+              </button>
+            </div>
           </div>
 
-          <div className="text-xs text-slate-300 space-y-2 leading-relaxed">
-            <p>
-              In accordance with prompt requirements, separate Agent Logins and staff profile systems have been <span className="text-cyan-300 font-semibold">completely removed</span>.
-            </p>
-            <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-[11px] space-y-1">
-              <div className="flex justify-between">
-                <span className="text-slate-400">Configured Owner Identity:</span>
-                <span className="font-mono text-cyan-400 font-semibold">{ownerEmail || 'playwithsakthigaming@gmail.com'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Timezone Engine:</span>
-                <span className="text-slate-200">Asia/Kolkata</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Row Level Security:</span>
-                <span className="text-emerald-400 font-semibold">Enforced on all tables</span>
-              </div>
+          {/* Sync Feedback Toast */}
+          {syncUserFeedback && (
+            <div
+              className={`p-3 rounded-xl border text-xs flex items-start gap-2.5 ${
+                syncUserFeedback.ok
+                  ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
+                  : 'bg-amber-950/60 border-amber-500/40 text-amber-300'
+              }`}
+            >
+              {syncUserFeedback.ok ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              )}
+              <span>{syncUserFeedback.message}</span>
+            </div>
+          )}
+
+          {/* Role Filter Tabs */}
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setRoleFilter('all')}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                roleFilter === 'all'
+                  ? 'bg-cyan-950 border border-cyan-500 text-cyan-300 font-bold'
+                  : 'bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              All Members ({profiles.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setRoleFilter('admin')}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                roleFilter === 'admin'
+                  ? 'bg-amber-950/70 border border-amber-500 text-amber-300 font-bold'
+                  : 'bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              Admins ({profiles.filter((p) => p.role === 'admin').length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setRoleFilter('manager')}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                roleFilter === 'manager'
+                  ? 'bg-cyan-950/70 border border-cyan-500 text-cyan-300 font-bold'
+                  : 'bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              Managers ({profiles.filter((p) => p.role === 'manager').length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setRoleFilter('collection_team')}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                roleFilter === 'collection_team'
+                  ? 'bg-emerald-950/70 border border-emerald-500 text-emerald-300 font-bold'
+                  : 'bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              Collection Team ({profiles.filter((p) => p.role === 'collection_team').length})
+            </button>
+          </div>
+
+          {/* Members Table */}
+          <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/40">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[10px] bg-slate-900/80">
+                  <th className="py-2.5 px-3">Team Member</th>
+                  <th className="py-2.5 px-3">Contact</th>
+                  <th className="py-2.5 px-3">Assigned Role & Permissions</th>
+                  <th className="py-2.5 px-3 text-center">Status</th>
+                  <th className="py-2.5 px-3 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 font-tabular">
+                {profiles
+                  .filter((p) => roleFilter === 'all' || p.role === roleFilter)
+                  .map((p) => {
+                    const isSelf = ownerEmail?.toLowerCase() === p.email.toLowerCase();
+                    const isOwnerAccount = p.email.toLowerCase() === 'playwithsakthigaming@gmail.com';
+                    const roleBadge = ROLE_LABELS[p.role] || ROLE_LABELS.collection_team;
+
+                    return (
+                      <tr key={p.email} className="hover:bg-slate-900/40 transition-colors">
+                        {/* Member Identity & Avatar */}
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-900 border border-cyan-500/40 shrink-0 flex items-center justify-center">
+                              {p.avatarUrl ? (
+                                <img
+                                  src={p.avatarUrl}
+                                  alt={p.displayName}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-xs font-bold text-cyan-300 uppercase">
+                                  {(p.displayName || p.email).charAt(0)}
+                                </span>
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold text-white truncate">{p.displayName}</span>
+                                {isSelf && (
+                                  <span className="px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-400 text-[9px] font-mono border border-cyan-500/30">
+                                    YOU
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-slate-400 truncate block font-mono">
+                                {p.email}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Contact */}
+                        <td className="py-3 px-3 text-slate-300 font-mono text-[11px]">
+                          {p.phone || <span className="text-slate-500 italic">No phone set</span>}
+                        </td>
+
+                        {/* Role Selector */}
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={p.role}
+                              onChange={(e) => handleRoleChange(p.email, e.target.value as UserRole)}
+                              disabled={isOwnerAccount}
+                              className={`px-2.5 py-1 rounded-lg text-xs font-semibold border bg-slate-900 focus:outline-none focus:border-cyan-400 transition-colors cursor-pointer ${roleBadge.badgeColor} ${
+                                isOwnerAccount ? 'opacity-80 cursor-not-allowed' : ''
+                              }`}
+                            >
+                              <option value="admin" className="bg-slate-900 text-amber-300">
+                                Administrator (முழு நிர்வாகி)
+                              </option>
+                              <option value="manager" className="bg-slate-900 text-cyan-300">
+                                Manager (மேலாளர்)
+                              </option>
+                              <option value="collection_team" className="bg-slate-900 text-emerald-300">
+                                Collection Team (வசூல் குழு)
+                              </option>
+                            </select>
+                          </div>
+                        </td>
+
+                        {/* Status */}
+                        <td className="py-3 px-3 text-center">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                              p.isActive
+                                ? 'bg-emerald-950/50 text-emerald-400 border border-emerald-500/30'
+                                : 'bg-slate-800 text-slate-400'
+                            }`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${p.isActive ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+                            {p.isActive ? 'Active' : 'Disabled'}
+                          </span>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-3 px-3 text-center">
+                          {isOwnerAccount ? (
+                            <span className="text-[10px] text-slate-500 font-mono">Designated Owner</span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteMember(p.email)}
+                              className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-rose-950/30 transition-colors cursor-pointer"
+                              title={`Remove ${p.email}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Role Permissions Matrix Card (அனுமதி அட்டவணை) */}
+          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <span className="font-semibold text-slate-200 text-xs flex items-center gap-1.5">
+                <Shield className="w-4 h-4 text-cyan-400" />
+                Role Permissions Matrix (பாத்திர அனுமதி அட்டவணை)
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono">Strict Access Control</span>
+            </div>
+
+            <div className="overflow-x-auto text-[11px]">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-slate-800 text-slate-400 text-[10px] uppercase">
+                    <th className="py-1.5">Feature & Action</th>
+                    <th className="py-1.5 px-2 text-center text-amber-300">Admin (முழு நிர்வாகி)</th>
+                    <th className="py-1.5 px-2 text-center text-cyan-300">Manager (மேலாளர்)</th>
+                    <th className="py-1.5 px-2 text-center text-emerald-300">Collection Team (வசூல் குழு)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/40 font-tabular text-slate-300">
+                  <tr>
+                    <td className="py-1.5">Due Collections & Receipt Generation</td>
+                    <td className="py-1.5 px-2 text-center text-emerald-400 font-bold">✓ Full</td>
+                    <td className="py-1.5 px-2 text-center text-emerald-400 font-bold">✓ Full</td>
+                    <td className="py-1.5 px-2 text-center text-emerald-400 font-bold">✓ Full</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1.5">Customer Registry & Passbook Links</td>
+                    <td className="py-1.5 px-2 text-center text-emerald-400 font-bold">✓ Full</td>
+                    <td className="py-1.5 px-2 text-center text-emerald-400 font-bold">✓ Full</td>
+                    <td className="py-1.5 px-2 text-center text-cyan-300 font-medium">View Contact Only</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1.5">Loan Creation & Disbursement</td>
+                    <td className="py-1.5 px-2 text-center text-emerald-400 font-bold">✓ Full</td>
+                    <td className="py-1.5 px-2 text-center text-emerald-400 font-bold">✓ Full</td>
+                    <td className="py-1.5 px-2 text-center text-rose-400">✗ Blocked</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1.5">Refunds & Reversals</td>
+                    <td className="py-1.5 px-2 text-center text-emerald-400 font-bold">✓ Full</td>
+                    <td className="py-1.5 px-2 text-center text-emerald-400 font-bold">✓ Full</td>
+                    <td className="py-1.5 px-2 text-center text-rose-400">✗ Blocked</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1.5">Financial Reports & Profit/Loss</td>
+                    <td className="py-1.5 px-2 text-center text-emerald-400 font-bold">✓ Full</td>
+                    <td className="py-1.5 px-2 text-center text-emerald-400 font-bold">✓ Full</td>
+                    <td className="py-1.5 px-2 text-center text-rose-400">✗ Blocked</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1.5">Customer Ledger (Day Book)</td>
+                    <td className="py-1.5 px-2 text-center text-emerald-400 font-bold">✓ Full</td>
+                    <td className="py-1.5 px-2 text-center text-emerald-400 font-bold">✓ Full</td>
+                    <td className="py-1.5 px-2 text-center text-rose-400">✗ Blocked</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1.5">Settings & Cloud Supabase Sync</td>
+                    <td className="py-1.5 px-2 text-center text-emerald-400 font-bold">✓ Full</td>
+                    <td className="py-1.5 px-2 text-center text-rose-400">✗ Blocked</td>
+                    <td className="py-1.5 px-2 text-center text-rose-400">✗ Blocked</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1.5">User Roles & Permission Assignment</td>
+                    <td className="py-1.5 px-2 text-center text-emerald-400 font-bold">✓ Full</td>
+                    <td className="py-1.5 px-2 text-center text-rose-400">✗ Blocked</td>
+                    <td className="py-1.5 px-2 text-center text-rose-400">✗ Blocked</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
+
+        {/* ADD TEAM MEMBER MODAL */}
+        {isAddUserModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <div className="w-full max-w-md bg-[#090e1a] border border-cyan-500/40 rounded-2xl shadow-2xl p-5 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <UserPlus className="w-4 h-4 text-cyan-400" />
+                  <h3 className="text-sm font-bold text-white font-display">Add New Team Member</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAddUserModalOpen(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {addMemberFeedback && (
+                <div
+                  className={`p-3 rounded-xl border text-xs flex items-center gap-2 ${
+                    addMemberFeedback.ok
+                      ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
+                      : 'bg-rose-950/60 border-rose-500/40 text-rose-300'
+                  }`}
+                >
+                  {addMemberFeedback.ok ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                  )}
+                  <span>{addMemberFeedback.message}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleAddMember} className="space-y-3 text-xs">
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">
+                    Email Address *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="e.g. staff@srisennamal.com or user@gmail.com"
+                    value={newMemberEmail}
+                    onChange={(e) => setNewMemberEmail(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-cyan-400 focus:outline-none font-mono"
+                  />
+                  <span className="text-[10px] text-slate-500 mt-0.5 block">
+                    Must match user email registered in Supabase Auth.
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">
+                    Display Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. R. Selvam"
+                    value={newMemberName}
+                    onChange={(e) => setNewMemberName(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-cyan-400 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. 9842100077"
+                    value={newMemberPhone}
+                    onChange={(e) => setNewMemberPhone(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-cyan-400 focus:outline-none font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">
+                    Assign Role *
+                  </label>
+                  <select
+                    value={newMemberRole}
+                    onChange={(e) => setNewMemberRole(e.target.value as UserRole)}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-cyan-400 focus:outline-none"
+                  >
+                    <option value="collection_team">Collection Team (வசூல் குழு - Field Collections & Receipts)</option>
+                    <option value="manager">Manager (மேலாளர் - Loan Creation & Customer Ops)</option>
+                    <option value="admin">Administrator (முழு நிர்வாகி - Full Access & Settings)</option>
+                  </select>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddUserModalOpen(false)}
+                    className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-semibold hover:bg-slate-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-xl bg-cyan-400 text-black font-bold hover:bg-cyan-300 transition-colors shadow-[0_0_12px_rgba(6,182,212,0.3)]"
+                  >
+                    Save & Assign Role
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Data Clearance & Factory Reset (Danger Zone) */}
         {onOpenClearData && (
@@ -583,7 +1117,7 @@ CREATE TABLE IF NOT EXISTS public.businesses (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('Asia/Kolkata', now())
 );
 
--- 2. OWNER ACCESS TABLE
+-- 2. OWNER ACCESS & USER PROFILES (RBAC)
 CREATE TABLE IF NOT EXISTS public.owner_access (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     owner_email TEXT UNIQUE NOT NULL,
@@ -592,9 +1126,25 @@ CREATE TABLE IF NOT EXISTS public.owner_access (
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('Asia/Kolkata', now())
 );
 
+CREATE TABLE IF NOT EXISTS public.user_profiles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email TEXT UNIQUE NOT NULL,
+    display_name TEXT NOT NULL,
+    phone TEXT DEFAULT '',
+    avatar_url TEXT DEFAULT '',
+    role TEXT NOT NULL DEFAULT 'collection_team' CHECK (role IN ('admin', 'manager', 'collection_team')),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('Asia/Kolkata', now()),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('Asia/Kolkata', now())
+);
+
 INSERT INTO public.owner_access (owner_email, is_active)
 VALUES ('playwithsakthigaming@gmail.com', TRUE)
 ON CONFLICT (owner_email) DO NOTHING;
+
+INSERT INTO public.user_profiles (email, display_name, phone, role, is_active)
+VALUES ('playwithsakthigaming@gmail.com', 'Sakthi (Owner)', '7812834522', 'admin', TRUE)
+ON CONFLICT (email) DO UPDATE SET role = 'admin', is_active = TRUE;
 
 -- 3. CUSTOMERS TABLE
 CREATE TABLE IF NOT EXISTS public.customers (

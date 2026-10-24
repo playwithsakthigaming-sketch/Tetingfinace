@@ -27,6 +27,9 @@ import {
   getActiveSupabaseConfig,
   saveCustomSupabaseConfig,
   testSupabaseConnection,
+  subscribeToSupabaseHealth,
+  ConnectionHealth,
+  runHealthCheck,
 } from '../services/supabase';
 
 interface LoginPageProps {
@@ -38,7 +41,7 @@ interface LoginPageProps {
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenResetPage, afkNotice }) => {
   // Auth state: strictly sign in or forgot password
   const [activeTab, setActiveTab] = useState<'signin' | 'forgot'>('signin');
-  const [email, setEmail] = useState<string>(DESIGNATED_OWNER_EMAIL);
+  const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [rememberDevice, setRememberDevice] = useState<boolean>(true);
@@ -48,20 +51,40 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenRese
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Supabase Configuration Status
+  // Supabase Configuration & Health Status
   const [supabaseConfig, setSupabaseConfig] = useState(() => getActiveSupabaseConfig());
+  const [dbHealth, setDbHealth] = useState<ConnectionHealth>({
+    status: getActiveSupabaseConfig().isConfigured ? 'connecting' : 'offline',
+    isConfigured: getActiveSupabaseConfig().isConfigured,
+    url: getActiveSupabaseConfig().url,
+    latencyMs: null,
+    lastPingAt: null,
+    consecutiveFailures: 0,
+    errorMessage: null,
+  });
   const [isConnectDbOpen, setIsConnectDbOpen] = useState<boolean>(false);
   const [dbUrlInput, setDbUrlInput] = useState<string>('');
   const [dbKeyInput, setDbKeyInput] = useState<string>('');
   const [dbStatusMsg, setDbStatusMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [isTestingDb, setIsTestingDb] = useState<boolean>(false);
 
-  // Refresh config state on mount
+  // Refresh config state, remember email, and listen to live Supabase connection health
   useEffect(() => {
     const cfg = getActiveSupabaseConfig();
     setSupabaseConfig(cfg);
     setDbUrlInput(cfg.url || '');
     setDbKeyInput(cfg.anonKey || '');
+
+    const remembered = typeof window !== 'undefined' ? localStorage.getItem('sri_sennamal_remembered_email') : null;
+    if (remembered) {
+      setEmail(remembered);
+    }
+
+    const unsubscribe = subscribeToSupabaseHealth((health) => {
+      setDbHealth(health);
+      setSupabaseConfig(getActiveSupabaseConfig());
+    });
+    return unsubscribe;
   }, []);
 
   const handleSaveDb = async (e: React.FormEvent) => {
@@ -102,14 +125,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenRese
     const cleanEmail = email.trim().toLowerCase();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    // Check if email format is valid or if email is not the authorized owner
-    if (!cleanEmail || !emailRegex.test(cleanEmail) || !isAuthorizedOwner(cleanEmail)) {
-      setErrorMessage('Invalid email address');
+    // Validate email format
+    if (!cleanEmail || !emailRegex.test(cleanEmail)) {
+      setErrorMessage('Please enter a valid email address');
       return;
     }
 
     if (!password) {
-      setErrorMessage('Incorrect password or email');
+      setErrorMessage('Please enter your password');
       return;
     }
 
@@ -118,26 +141,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenRese
 
     try {
       if (client && supabaseConfig.isConfigured) {
-        // Authenticate directly with Supabase Auth
+        // Authenticate directly with Supabase Auth (allows any user created in Supabase)
         const { data, error } = await client.auth.signInWithPassword({
           email: cleanEmail,
           password,
         });
 
         if (error) {
-          setErrorMessage('Incorrect password or email');
+          setErrorMessage(error.message || 'Incorrect password or email');
           setIsLoading(false);
           return;
         }
 
         if (data.user) {
-          if (!isAuthorizedOwner(data.user.email)) {
-            await client.auth.signOut();
-            setErrorMessage('Invalid email address');
-            setIsLoading(false);
-            return;
+          if (rememberDevice && typeof window !== 'undefined') {
+            localStorage.setItem('sri_sennamal_remembered_email', cleanEmail);
           }
-
           setSuccessMessage('Authentication Successful! Opening management portal...');
           setTimeout(() => {
             onLoginSuccess(data.user.email || cleanEmail);
@@ -146,13 +165,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenRese
       } else {
         // Fallback when Supabase credentials are in local mode
         await new Promise((resolve) => setTimeout(resolve, 350));
+        if (rememberDevice && typeof window !== 'undefined') {
+          localStorage.setItem('sri_sennamal_remembered_email', cleanEmail);
+        }
         setSuccessMessage('Authentication Successful! Opening management portal...');
         setTimeout(() => {
           onLoginSuccess(cleanEmail);
         }, 300);
       }
     } catch (err: any) {
-      setErrorMessage('Incorrect password or email');
+      setErrorMessage(err?.message || 'Incorrect password or email');
     } finally {
       setIsLoading(false);
     }
@@ -166,8 +188,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenRese
 
     const cleanEmail = email.trim().toLowerCase();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!cleanEmail || !emailRegex.test(cleanEmail) || !isAuthorizedOwner(cleanEmail)) {
-      setErrorMessage('Invalid email address');
+    if (!cleanEmail || !emailRegex.test(cleanEmail)) {
+      setErrorMessage('Please enter a valid email address');
       return;
     }
 
@@ -236,16 +258,29 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenRese
             type="button"
             onClick={() => setIsConnectDbOpen(true)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-mono border transition-all cursor-pointer ${
-              supabaseConfig.isConfigured
+              dbHealth.status === 'online'
                 ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/50'
+                : dbHealth.status === 'connecting'
+                ? 'bg-cyan-950/40 border-cyan-500/40 text-cyan-300 hover:bg-cyan-900/50'
                 : 'bg-amber-950/40 border-amber-500/40 text-amber-300 hover:bg-amber-900/50 shadow-[0_0_10px_rgba(245,158,11,0.2)]'
             }`}
-            title="Click to Connect or configure Supabase Database"
+            title="Click to Connect or view Supabase Database Health"
           >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                dbHealth.status === 'online'
+                  ? 'bg-emerald-400 animate-pulse'
+                  : dbHealth.status === 'connecting'
+                  ? 'bg-cyan-400 animate-spin'
+                  : 'bg-amber-400'
+              }`}
+            />
             <Database className="w-3 h-3 shrink-0" />
             <span>
-              {supabaseConfig.isConfigured
-                ? `Supabase: Connected (${supabaseConfig.source.toUpperCase()})`
+              {dbHealth.status === 'online'
+                ? `Supabase: Online (${dbHealth.latencyMs ? `${dbHealth.latencyMs}ms` : 'Connected'})`
+                : dbHealth.status === 'connecting'
+                ? 'Supabase: Connecting...'
                 : 'Supabase: Offline (Click to Connect)'}
             </span>
           </button>
@@ -335,7 +370,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenRese
           {activeTab === 'signin' && (
             <form onSubmit={handleSignIn} className="space-y-4 text-xs">
               <div>
-                <label className="block text-slate-300 font-semibold mb-1.5">Owner Email Address</label>
+                <label className="block text-slate-300 font-semibold mb-1.5">Email Address</label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
@@ -343,14 +378,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenRese
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="playwithsakthigaming@gmail.com"
+                    placeholder="Enter Email Address"
                     className="w-full pl-9 pr-3 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-white font-mono focus:outline-none focus:border-cyan-400 transition-colors"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1.5">Owner Password</label>
+                <label className="block text-slate-300 font-semibold mb-1.5">Password</label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
@@ -358,7 +393,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenRese
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter master password"
+                    placeholder="Enter Password"
                     className="w-full pl-9 pr-10 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-400 transition-colors"
                   />
                   <button
@@ -416,18 +451,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenRese
           {activeTab === 'forgot' && (
             <form onSubmit={handlePasswordRecovery} className="space-y-4 text-xs">
               <p className="text-slate-300 text-xs">
-                Enter your designated owner email. Supabase Auth will transmit a secure password reset link to your inbox.
+                Enter your email address. Supabase Auth will transmit a secure password reset link to your inbox.
               </p>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Owner Email</label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-white font-mono"
-                />
+                <label className="block text-slate-300 font-semibold mb-1">Email Address</label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter Email Address"
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-white font-mono focus:outline-none focus:border-cyan-400 transition-colors"
+                  />
+                </div>
               </div>
 
               <div className="flex items-center gap-2">

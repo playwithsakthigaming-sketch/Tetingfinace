@@ -25,9 +25,11 @@ import { ClearDataModal } from './components/ClearDataModal';
 import { NavigationDrawer } from './components/NavigationDrawer';
 import { BottomNav } from './components/BottomNav';
 import { CustomerPassbookView } from './components/CustomerPassbookView';
+import { UserProfileModal } from './components/UserProfileModal';
 import { financeStore } from './services/financeStore';
-import { Customer, Loan, Payment, PassbookData } from './types/finance';
+import { Customer, Loan, Payment, PassbookData, UserProfile, ROLE_PERMISSIONS } from './types/finance';
 import { DESIGNATED_OWNER_EMAIL, getSupabaseClient, isAuthorizedOwner } from './services/supabase';
+import { userService, subscribeToUserProfiles } from './services/userService';
 import { formatCoveredWeeksSummary } from './utils/financeCalculations';
 
 export default function App() {
@@ -40,7 +42,21 @@ export default function App() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isClearDataOpen, setIsClearDataOpen] = useState(false);
   const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [preSelectedLoanId, setPreSelectedLoanId] = useState<string | undefined>(undefined);
+
+  // Current User Profile & Role Permissions
+  const [currentProfile, setCurrentProfile] = useState<UserProfile>(() =>
+    userService.getProfileByEmail(financeStore.getState().currentUserEmail)
+  );
+
+  useEffect(() => {
+    setCurrentProfile(userService.getProfileByEmail(storeState.currentUserEmail));
+    const unsubscribe = subscribeToUserProfiles(() => {
+      setCurrentProfile(userService.getProfileByEmail(storeState.currentUserEmail));
+    });
+    return unsubscribe;
+  }, [storeState.currentUserEmail]);
   
   // Receipt Modal
   const [activeReceiptPayment, setActiveReceiptPayment] = useState<Payment | null>(null);
@@ -66,7 +82,7 @@ export default function App() {
 
     client.auth.getSession().then(({ data: { session } }) => {
       if (!isMounted) return;
-      if (session?.user?.email && isAuthorizedOwner(session.user.email)) {
+      if (session?.user?.email) {
         financeStore.setOwnerSession(session.user.email);
       }
     }).catch((err) => {
@@ -81,7 +97,7 @@ export default function App() {
         setPassbookToken(null);
         setPassbookData(null);
       }
-      if (session?.user?.email && isAuthorizedOwner(session.user.email)) {
+      if (session?.user?.email) {
         financeStore.setOwnerSession(session.user.email);
       }
     });
@@ -270,10 +286,13 @@ export default function App() {
           setPassbookToken(null);
           window.history.pushState({}, '', window.location.pathname);
         }}
-        onSuccess={() => {
+        onSuccess={(email) => {
           setIsResetPasswordOpen(false);
           setIsPassbookInvalid(false);
           setPassbookToken(null);
+          if (email) {
+            financeStore.setOwnerSession(email);
+          }
           window.history.pushState({}, '', window.location.pathname);
         }}
       />
@@ -339,6 +358,7 @@ export default function App() {
           onLogout={handleLogout}
           onOpenNewCollection={() => setIsPaymentModalOpen(true)}
           onToggleSidebar={() => setIsSidebarOpen(true)}
+          onOpenProfile={() => setIsProfileModalOpen(true)}
         />
 
         {/* Main Body */}
@@ -499,13 +519,35 @@ export default function App() {
           )}
 
           {currentTab === 'refunds' && (
-            <RefundsSection
-              payments={storeState.payments}
-              refunds={storeState.refunds}
-              loans={storeState.loans}
-              customers={storeState.customers}
-              onIssueRefund={(params) => financeStore.issueRefund(params)}
-            />
+            (ROLE_PERMISSIONS[currentProfile.role]?.canIssueRefunds ?? false) ? (
+              <RefundsSection
+                payments={storeState.payments}
+                refunds={storeState.refunds}
+                loans={storeState.loans}
+                customers={storeState.customers}
+                onIssueRefund={(params) => financeStore.issueRefund(params)}
+              />
+            ) : (
+              <div className="max-w-xl mx-auto p-8 rounded-2xl neon-card text-center space-y-3 border border-amber-500/30 my-8">
+                <div className="w-12 h-12 rounded-2xl bg-amber-950/60 border border-amber-500/40 text-amber-400 mx-auto flex items-center justify-center text-xl font-bold">
+                  🔒
+                </div>
+                <h3 className="text-base font-bold text-white font-display">
+                  Refunds Restricted (அனுமதி வரம்பு)
+                </h3>
+                <p className="text-xs text-slate-300">
+                  Logged in as <strong>{currentProfile.displayName}</strong> [{currentProfile.role.toUpperCase()}]. Refunds and reversals require Administrator or Manager role.
+                </p>
+                <div className="pt-2">
+                  <button
+                    onClick={() => setCurrentTab('collections')}
+                    className="px-4 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-black font-bold text-xs cursor-pointer"
+                  >
+                    Back to Collections Desk
+                  </button>
+                </div>
+              </div>
+            )
           )}
 
           {currentTab === 'ledger' && (
@@ -542,12 +584,41 @@ export default function App() {
           {currentTab === 'tests' && <AutomatedTestsView />}
 
           {currentTab === 'settings' && (
-            <SettingsView
-              businessInfo={storeState.businessInfo}
-              onUpdateBusinessInfo={(info) => financeStore.updateBusinessInfo(info)}
-              ownerEmail={storeState.currentUserEmail}
-              onOpenClearData={() => setIsClearDataOpen(true)}
-            />
+            (ROLE_PERMISSIONS[currentProfile.role]?.canManageSettings ?? false) ? (
+              <SettingsView
+                businessInfo={storeState.businessInfo}
+                onUpdateBusinessInfo={(info) => financeStore.updateBusinessInfo(info)}
+                ownerEmail={storeState.currentUserEmail}
+                onOpenClearData={() => setIsClearDataOpen(true)}
+                onOpenProfile={() => setIsProfileModalOpen(true)}
+              />
+            ) : (
+              <div className="max-w-xl mx-auto p-8 rounded-2xl neon-card text-center space-y-3 border border-amber-500/30 my-8">
+                <div className="w-12 h-12 rounded-2xl bg-amber-950/60 border border-amber-500/40 text-amber-400 mx-auto flex items-center justify-center text-xl font-bold">
+                  🔒
+                </div>
+                <h3 className="text-base font-bold text-white font-display">
+                  Settings Restricted to Administrator
+                </h3>
+                <p className="text-xs text-slate-300">
+                  Business configuration, licences, and team roles are managed exclusively by the Administrator. You can update your personal profile, avatar photo, and password below.
+                </p>
+                <div className="flex justify-center gap-3 pt-2">
+                  <button
+                    onClick={() => setIsProfileModalOpen(true)}
+                    className="px-4 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-black font-bold text-xs cursor-pointer"
+                  >
+                    Open My Profile
+                  </button>
+                  <button
+                    onClick={() => setCurrentTab('collections')}
+                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-slate-700 cursor-pointer"
+                  >
+                    Collections Desk
+                  </button>
+                </div>
+              </div>
+            )
           )}
         </main>
 
@@ -574,14 +645,23 @@ export default function App() {
           currentTab={currentTab}
           onSelectTab={setCurrentTab}
           ownerEmail={storeState.currentUserEmail}
+          businessAddress={storeState.businessInfo.address || '45 Bazaar Street, Salem, Tamil Nadu, ...'}
           onOpenClearData={() => setIsClearDataOpen(true)}
           onLogout={handleLogout}
+          onOpenProfile={() => setIsProfileModalOpen(true)}
         />
 
       </div>
 
       {/* --- MODALS --- */}
       
+      {/* 0. User Profile & Account Modal */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        currentUserEmail={storeState.currentUserEmail}
+      />
+
       {/* 1. Simplified 8-Field Receipt Modal */}
       <ReceiptModal
         payment={activeReceiptPayment}

@@ -206,3 +206,93 @@ export interface PassbookData {
   outstandingBalance: number;
   businessInfo: BusinessInfo;
 }
+
+// User Roles & Access Control
+export type UserRole = 'admin' | 'manager' | 'collection_team';
+
+export interface UserProfile {
+  id: string; // Auth User UUID or generated ID
+  email: string;
+  displayName: string;
+  phone: string;
+  avatarUrl?: string; // GIF, PNG, JPG (Base64 data URL or external URL, max 10MB)
+  role: UserRole;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  lastLoginAt?: string;
+}
+
+export interface RolePermissions {
+  canCreateLoan: boolean;
+  canApproveLoan: boolean;
+  canDeleteLoan: boolean;
+  canCollectDues: boolean;
+  canIssueRefunds: boolean;
+  canManageCustomers: boolean;
+  canViewFinancialReports: boolean;
+  canViewLedger: boolean;
+  canManageSettings: boolean;
+  canManageUsers: boolean;
+  canClearData: boolean;
+}
+
+export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
+  admin: {
+    canCreateLoan: true,
+    canApproveLoan: true,
+    canDeleteLoan: true,
+    canCollectDues: true,
+    canIssueRefunds: true,
+    canManageCustomers: true,
+    canViewFinancialReports: true,
+    canViewLedger: true,
+    canManageSettings: true,
+    canManageUsers: true,
+    canClearData: true,
+  },
+  manager: {
+    canCreateLoan: true,
+    canApproveLoan: true,
+    canDeleteLoan: false,
+    canCollectDues: true,
+    canIssueRefunds: true,
+    canManageCustomers: true,
+    canViewFinancialReports: true,
+    canViewLedger: true,
+    canManageSettings: false,
+    canManageUsers: false,
+    canClearData: false,
+  },
+  collection_team: {
+    canCreateLoan: false,
+    canApproveLoan: false,
+    canDeleteLoan: false,
+    canCollectDues: true,
+    canIssueRefunds: false,
+    canManageCustomers: false,
+    canViewFinancialReports: false,
+    canViewLedger: false,
+    canManageSettings: false,
+    canManageUsers: false,
+    canClearData: false,
+  },
+};
+
+export const ROLE_LABELS: Record<UserRole, { en: string; ta: string; badgeColor: string }> = {
+  admin: {
+    en: 'Administrator',
+    ta: 'முழு நிர்வாகி',
+    badgeColor: 'border-amber-500/40 bg-amber-950/40 text-amber-300',
+  },
+  manager: {
+    en: 'Manager',
+    ta: 'மேலாளர்',
+    badgeColor: 'border-cyan-500/40 bg-cyan-950/40 text-cyan-300',
+  },
+  collection_team: {
+    en: 'Collection Team',
+    ta: 'வசூல் குழு',
+    badgeColor: 'border-emerald-500/40 bg-emerald-950/40 text-emerald-300',
+  },
+};

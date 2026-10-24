@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS public.businesses (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('Asia/Kolkata', now())
 );
 
--- 2. OWNER ACCESS TABLE (Enforces Single Owner Authorization)
+-- 2. OWNER ACCESS & USER ROLES (RBAC)
 CREATE TABLE IF NOT EXISTS public.owner_access (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     owner_email TEXT UNIQUE NOT NULL,
@@ -33,10 +33,27 @@ CREATE TABLE IF NOT EXISTS public.owner_access (
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('Asia/Kolkata', now())
 );
 
--- Seed Designated Owner
+-- USER PROFILES (Supports Admin, Manager, Collection Team roles, profile photos & phone)
+CREATE TABLE IF NOT EXISTS public.user_profiles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email TEXT UNIQUE NOT NULL,
+    display_name TEXT NOT NULL,
+    phone TEXT DEFAULT '',
+    avatar_url TEXT DEFAULT '',
+    role TEXT NOT NULL DEFAULT 'collection_team' CHECK (role IN ('admin', 'manager', 'collection_team')),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('Asia/Kolkata', now()),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('Asia/Kolkata', now())
+);
+
+-- Seed Designated Owner as Super Admin
 INSERT INTO public.owner_access (owner_email, is_active)
 VALUES ('playwithsakthigaming@gmail.com', TRUE)
 ON CONFLICT (owner_email) DO NOTHING;
+
+INSERT INTO public.user_profiles (email, display_name, phone, role, is_active)
+VALUES ('playwithsakthigaming@gmail.com', 'Sakthi (Owner)', '7812834522', 'admin', TRUE)
+ON CONFLICT (email) DO UPDATE SET role = 'admin', is_active = TRUE;
 
 -- 3. CUSTOMERS TABLE
 CREATE TABLE IF NOT EXISTS public.customers (
