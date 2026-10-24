@@ -354,6 +354,7 @@ export default function App() {
           onSelectTab={setCurrentTab}
           autoSaveStatus={storeState.autoSaveStatus}
           ownerEmail={storeState.currentUserEmail}
+          userProfile={currentProfile}
           onOpenLogin={() => setIsLoginOpen(true)}
           onLogout={handleLogout}
           onOpenNewCollection={() => setIsPaymentModalOpen(true)}
@@ -645,6 +646,7 @@ export default function App() {
           currentTab={currentTab}
           onSelectTab={setCurrentTab}
           ownerEmail={storeState.currentUserEmail}
+          userProfile={currentProfile}
           businessAddress={storeState.businessInfo.address || '45 Bazaar Street, Salem, Tamil Nadu, ...'}
           onOpenClearData={() => setIsClearDataOpen(true)}
           onLogout={handleLogout}

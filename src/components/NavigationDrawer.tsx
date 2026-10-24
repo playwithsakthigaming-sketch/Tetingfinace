@@ -22,6 +22,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { userService } from '../services/userService';
+import { UserProfile } from '../types/finance';
 
 interface NavigationDrawerProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ interface NavigationDrawerProps {
   onOpenClearData?: () => void;
   onLogout?: () => void;
   onOpenProfile?: () => void;
+  userProfile?: UserProfile;
 }
 
 export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
@@ -45,10 +47,11 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
   onOpenClearData,
   onLogout,
   onOpenProfile,
+  userProfile,
 }) => {
   if (!isOpen) return null;
 
-  const currentProfile = userService.getProfileByEmail(ownerEmail);
+  const currentProfile = userProfile || userService.getProfileByEmail(ownerEmail);
 
   // Role mode text and initial matching Image 2
   const modeTitle = currentProfile.role === 'admin'

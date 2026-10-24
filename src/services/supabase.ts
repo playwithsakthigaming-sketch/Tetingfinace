@@ -177,13 +177,15 @@ let connectionHealth: ConnectionHealth = {
 };
 
 function notifyHealthListeners() {
-  healthListeners.forEach((listener) => {
-    try {
-      listener({ ...connectionHealth });
-    } catch (e) {
-      console.warn('Error in health listener:', e);
-    }
-  });
+  setTimeout(() => {
+    healthListeners.forEach((listener) => {
+      try {
+        listener({ ...connectionHealth });
+      } catch (e) {
+        console.warn('Error in health listener:', e);
+      }
+    });
+  }, 0);
 }
 
 export function subscribeToSupabaseHealth(listener: HealthListener): () => void {

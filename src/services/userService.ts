@@ -47,13 +47,17 @@ type ProfileListener = () => void;
 const profileListeners = new Set<ProfileListener>();
 
 function notifyListeners() {
-  profileListeners.forEach((fn) => {
-    try {
-      fn();
-    } catch (e) {
-      console.warn('Error in profile listener:', e);
-    }
-  });
+  // Asynchronously dispatch to avoid calling setState on mounted components
+  // during another component's render phase
+  setTimeout(() => {
+    profileListeners.forEach((fn) => {
+      try {
+        fn();
+      } catch (e) {
+        console.warn('Error in profile listener:', e);
+      }
+    });
+  }, 0);
 }
 
 export class UserService {
@@ -86,11 +90,13 @@ export class UserService {
     return [...DEFAULT_PROFILES];
   }
 
-  private persistProfiles(): void {
+  private persistProfiles(notify = true): void {
     if (typeof window === 'undefined') return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.profiles));
-      notifyListeners();
+      if (notify) {
+        notifyListeners();
+      }
     } catch (e) {
       console.warn('Failed to persist user profiles:', e);
     }
@@ -128,7 +134,7 @@ export class UserService {
     };
 
     this.profiles.push(newProfile);
-    this.persistProfiles();
+    this.persistProfiles(false);
     return newProfile;
   }
 

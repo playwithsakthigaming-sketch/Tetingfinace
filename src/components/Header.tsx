@@ -33,6 +33,7 @@ interface HeaderProps {
   onOpenNewCollection: () => void;
   onToggleSidebar?: () => void;
   onOpenProfile?: () => void;
+  userProfile?: UserProfile;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -45,6 +46,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenNewCollection,
   onToggleSidebar,
   onOpenProfile,
+  userProfile: propUserProfile,
 }) => {
   const [dbHealth, setDbHealth] = useState<ConnectionHealth>(() => ({
     status: getActiveSupabaseConfig().isConfigured ? 'connecting' : 'offline',
@@ -56,9 +58,17 @@ export const Header: React.FC<HeaderProps> = ({
     errorMessage: null,
   }));
 
-  const [userProfile, setUserProfile] = useState<UserProfile>(() =>
-    userService.getProfileByEmail(ownerEmail)
+  const [internalProfile, setInternalProfile] = useState<UserProfile>(() =>
+    propUserProfile || userService.getProfileByEmail(ownerEmail)
   );
+
+  useEffect(() => {
+    if (propUserProfile) {
+      setInternalProfile(propUserProfile);
+    }
+  }, [propUserProfile]);
+
+  const activeProfile = propUserProfile || internalProfile;
 
   // Language Switch State: 'en' | 'ta'
   const [currentLang, setCurrentLang] = useState<'en' | 'ta'>('en');
@@ -91,20 +101,27 @@ export const Header: React.FC<HeaderProps> = ({
     const unsubscribeDb = subscribeToSupabaseHealth((health) => {
       setDbHealth(health);
     });
-    const unsubscribeProfile = subscribeToUserProfiles(() => {
-      setUserProfile(userService.getProfileByEmail(ownerEmail));
-    });
+
+    // Only subscribe to profile events if parent didn't supply userProfile
+    let unsubscribeProfile: (() => void) | undefined;
+    if (!propUserProfile) {
+      unsubscribeProfile = subscribeToUserProfiles(() => {
+        setInternalProfile(userService.getProfileByEmail(ownerEmail));
+      });
+    }
 
     return () => {
       unsubscribeDb();
-      unsubscribeProfile();
+      if (unsubscribeProfile) {
+        unsubscribeProfile();
+      }
     };
-  }, [ownerEmail]);
+  }, [ownerEmail, propUserProfile]);
 
   // Role display label
-  const roleName = userProfile.role === 'admin'
+  const roleName = activeProfile.role === 'admin'
     ? 'ADMIN'
-    : userProfile.role === 'manager'
+    : activeProfile.role === 'manager'
     ? 'MANAGER'
     : 'AGENT';
 
@@ -228,15 +245,15 @@ export const Header: React.FC<HeaderProps> = ({
                 className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-slate-900 border border-cyan-400/50 hover:border-cyan-300 flex items-center justify-center shrink-0 cursor-pointer transition-transform hover:scale-105"
                 title="Open Profile Settings"
               >
-                {userProfile.avatarUrl ? (
+                {activeProfile.avatarUrl ? (
                   <img
-                    src={userProfile.avatarUrl}
-                    alt={userProfile.displayName}
+                    src={activeProfile.avatarUrl}
+                    alt={activeProfile.displayName}
                     className="w-full h-full object-cover"
                   />
                 ) : (
                   <span className="text-xs font-bold text-cyan-300 uppercase">
-                    {(userProfile.displayName || userProfile.email || 'U').charAt(0)}
+                    {(activeProfile.displayName || activeProfile.email || 'U').charAt(0)}
                   </span>
                 )}
               </button>
