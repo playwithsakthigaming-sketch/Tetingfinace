@@ -45,17 +45,16 @@ export const OwnerLoginModal: React.FC<OwnerLoginModalProps> = ({
     setErrorMessage(null);
 
     const cleanEmail = email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     // Enforce designated owner identity verification
-    if (!isAuthorizedOwner(cleanEmail)) {
-      setErrorMessage(
-        'Access Denied: Only the designated owner account (playwithsakthigaming@gmail.com) is authorized to access Sri Sennamal Finance management.'
-      );
+    if (!cleanEmail || !emailRegex.test(cleanEmail) || !isAuthorizedOwner(cleanEmail)) {
+      setErrorMessage('Invalid email address');
       return;
     }
 
     if (!password) {
-      setErrorMessage('Please enter your owner account password.');
+      setErrorMessage('Incorrect password or email');
       return;
     }
 
@@ -70,14 +69,14 @@ export const OwnerLoginModal: React.FC<OwnerLoginModalProps> = ({
         });
 
         if (error) {
-          setErrorMessage(error.message);
+          setErrorMessage('Incorrect password or email');
           setIsLoading(false);
           return;
         }
 
         if (data.user && !isAuthorizedOwner(data.user.email)) {
           await supabase.auth.signOut();
-          setErrorMessage('Unauthorized: User account does not have owner privileges.');
+          setErrorMessage('Invalid email address');
           setIsLoading(false);
           return;
         }
@@ -90,7 +89,7 @@ export const OwnerLoginModal: React.FC<OwnerLoginModalProps> = ({
       onSuccess(cleanEmail);
       onClose();
     } catch (err: any) {
-      setErrorMessage(err.message || 'Authentication error.');
+      setErrorMessage('Incorrect password or email');
     } finally {
       setIsLoading(false);
     }

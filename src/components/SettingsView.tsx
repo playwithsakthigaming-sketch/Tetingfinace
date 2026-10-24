@@ -1,7 +1,8 @@
 /**
  * Sri Sennamal Finance — Business Settings & Compliance Configuration
  * Strictly adheres to official Tamil Nadu money lending rules.
- * Manages verified licence number, owner authorization, and penalty rules.
+ * Manages verified licence number, owner authorization, penalty rules,
+ * and Cloud Database Connection (Supabase Connect DB).
  */
 
 import React, { useState } from 'react';
@@ -17,9 +18,22 @@ import {
   CheckCircle,
   AlertCircle,
   Clock,
-  Coins,
+  Database,
+  RefreshCw,
+  Copy,
+  Check,
+  Sliders,
+  CheckCircle2,
+  Lock,
 } from 'lucide-react';
 import { BusinessInfo } from '../types/finance';
+import {
+  getActiveSupabaseConfig,
+  saveCustomSupabaseConfig,
+  clearCustomSupabaseConfig,
+  testSupabaseConnection,
+  SupabaseConfig,
+} from '../services/supabase';
 
 interface SettingsViewProps {
   businessInfo: BusinessInfo;
@@ -34,6 +48,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   ownerEmail,
   onOpenClearData,
 }) => {
+  // Business Info form state
   const [companyName, setCompanyName] = useState(businessInfo.companyName);
   const [phone, setPhone] = useState(businessInfo.phone);
   const [email, setEmail] = useState(businessInfo.email);
@@ -41,6 +56,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [licenceNumber, setLicenceNumber] = useState(businessInfo.licenceNumber);
   const [licenceVerified, setLicenceVerified] = useState(businessInfo.licenceVerified);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Supabase Connect DB state
+  const [supabaseConfig, setSupabaseConfig] = useState<SupabaseConfig>(() => getActiveSupabaseConfig());
+  const [dbUrl, setDbUrl] = useState(supabaseConfig.url || '');
+  const [dbKey, setDbKey] = useState(supabaseConfig.anonKey || '');
+  const [isTestingDb, setIsTestingDb] = useState(false);
+  const [dbTestResult, setDbTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [dbSaveMessage, setDbSaveMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // SQL Migration Modal state
+  const [isSqlModalOpen, setIsSqlModalOpen] = useState(false);
+  const [sqlCopied, setSqlCopied] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +84,51 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setTimeout(() => setSaveSuccess(false), 4000);
   };
 
+  // Test Supabase Database Connection
+  const handleTestDbConnection = async () => {
+    setIsTestingDb(true);
+    setDbTestResult(null);
+    setDbSaveMessage(null);
+
+    try {
+      const res = await testSupabaseConnection(dbUrl, dbKey);
+      setDbTestResult(res);
+    } catch (err: any) {
+      setDbTestResult({ ok: false, message: err?.message || 'Connection test failed.' });
+    } finally {
+      setIsTestingDb(false);
+    }
+  };
+
+  // Save Supabase Database Credentials
+  const handleSaveDbConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    setDbTestResult(null);
+
+    const result = saveCustomSupabaseConfig(dbUrl, dbKey);
+    if (!result.success) {
+      setDbSaveMessage({ ok: false, text: result.error || 'Failed to save configuration.' });
+      return;
+    }
+
+    const updated = getActiveSupabaseConfig();
+    setSupabaseConfig(updated);
+    setDbSaveMessage({ ok: true, text: 'Supabase Database credentials connected & saved successfully!' });
+    setTimeout(() => setDbSaveMessage(null), 5000);
+  };
+
+  // Disconnect / Reset Database to Local Offline Mode
+  const handleClearDbConfig = () => {
+    clearCustomSupabaseConfig();
+    const updated = getActiveSupabaseConfig();
+    setSupabaseConfig(updated);
+    setDbUrl('');
+    setDbKey('');
+    setDbTestResult(null);
+    setDbSaveMessage({ ok: true, text: 'Supabase cloud connection disconnected. Running in Local Storage Mode.' });
+    setTimeout(() => setDbSaveMessage(null), 4000);
+  };
+
   return (
     <div className="space-y-6 pb-12 max-w-4xl mx-auto">
       
@@ -69,16 +141,175 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </h2>
         </div>
         <p className="text-xs text-slate-400 mt-1">
-          Configure Sri Sennamal Finance business profile, verified Tamil Nadu Money Lending licence number, and owner credentials.
+          Configure Sri Sennamal Finance business profile, verified Tamil Nadu Money Lending licence number, and connect Supabase cloud database.
         </p>
       </div>
 
       {saveSuccess && (
         <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-2">
           <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-          <span>Settings successfully updated and synchronized to cloud database.</span>
+          <span>Settings successfully updated and saved.</span>
         </div>
       )}
+
+      {/* ======================================================== */}
+      {/* 1. CONNECT DB (SUPABASE CLOUD DATABASE CONNECTION) CARD */}
+      {/* ======================================================== */}
+      <div className="p-6 rounded-2xl neon-card space-y-4 border border-cyan-500/40 bg-[#090e1a]/95">
+        <div className="pb-3 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-cyan-950/60 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.25)]">
+              <Database className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white font-display flex items-center gap-2">
+                Connect DB (Supabase Database Connection)
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                Connect your cloud PostgreSQL database for persistent customer records, loans, and ledger sync.
+              </p>
+            </div>
+          </div>
+
+          {/* Connection Status Pill */}
+          <div
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono font-medium border ${
+              supabaseConfig.isConfigured
+                ? 'bg-emerald-950/50 border-emerald-500/50 text-emerald-300'
+                : 'bg-amber-950/50 border-amber-500/50 text-amber-300'
+            }`}
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                supabaseConfig.isConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+              }`}
+            />
+            <span>
+              {supabaseConfig.isConfigured
+                ? `Cloud DB Connected (${supabaseConfig.source.toUpperCase()})`
+                : 'Local Offline Storage Mode'}
+            </span>
+          </div>
+        </div>
+
+        {/* Status & Feedback Banners */}
+        {dbSaveMessage && (
+          <div
+            className={`p-3 rounded-xl border text-xs flex items-start gap-2.5 ${
+              dbSaveMessage.ok
+                ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
+                : 'bg-rose-950/60 border-rose-500/40 text-rose-300'
+            }`}
+          >
+            {dbSaveMessage.ok ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+            )}
+            <span>{dbSaveMessage.text}</span>
+          </div>
+        )}
+
+        {dbTestResult && (
+          <div
+            className={`p-3 rounded-xl border text-xs flex items-start gap-2.5 ${
+              dbTestResult.ok
+                ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
+                : 'bg-rose-950/60 border-rose-500/40 text-rose-300'
+            }`}
+          >
+            {dbTestResult.ok ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+            )}
+            <span>{dbTestResult.message}</span>
+          </div>
+        )}
+
+        {/* Database Connection Form */}
+        <form onSubmit={handleSaveDbConfig} className="space-y-4 text-xs pt-1">
+          <div>
+            <label className="block text-slate-300 font-semibold mb-1">
+              Supabase Project URL (VITE_SUPABASE_URL) *
+            </label>
+            <input
+              type="url"
+              required
+              placeholder="https://your-project-id.supabase.co"
+              value={dbUrl}
+              onChange={(e) => setDbUrl(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono focus:border-cyan-400 focus:outline-none transition-colors"
+            />
+            <span className="text-[10.5px] text-slate-500 mt-1 block">
+              Found in: <strong>Supabase Dashboard → Project Settings → API → Project URL</strong>
+            </span>
+          </div>
+
+          <div>
+            <label className="block text-slate-300 font-semibold mb-1">
+              Supabase Anon Public API Key (VITE_SUPABASE_ANON_KEY) *
+            </label>
+            <textarea
+              required
+              rows={2}
+              placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              value={dbKey}
+              onChange={(e) => setDbKey(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono focus:border-cyan-400 focus:outline-none text-[11px] transition-colors"
+            />
+            <span className="text-[10.5px] text-slate-500 mt-1 block">
+              Found in: <strong>Supabase Dashboard → Project Settings → API → Project API Keys (anon public)</strong>
+            </span>
+          </div>
+
+          {/* Action Row */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-800/80">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={isTestingDb || !dbUrl || !dbKey}
+                onClick={handleTestDbConnection}
+                className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-40 transition-colors"
+              >
+                {isTestingDb ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+                ) : (
+                  <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
+                )}
+                <span>{isTestingDb ? 'Testing Connection...' : 'Test Connection'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsSqlModalOpen(true)}
+                className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-500/30 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+              >
+                <Database className="w-3.5 h-3.5" />
+                <span>View SQL Migration Script</span>
+              </button>
+
+              {supabaseConfig.source === 'custom' && (
+                <button
+                  type="button"
+                  onClick={handleClearDbConfig}
+                  className="px-3 py-2 text-rose-400 hover:text-rose-300 text-xs hover:underline"
+                >
+                  Disconnect Cloud DB
+                </button>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-xl bg-[#00e5ff] hover:bg-[#38bdf8] text-black font-bold text-xs shadow-[0_0_15px_rgba(0,229,255,0.3)] transition-all flex items-center gap-1.5"
+            >
+              <Save className="w-4 h-4" />
+              <span>Save & Connect DB</span>
+            </button>
+          </div>
+        </form>
+      </div>
 
       {/* Main Settings Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -301,6 +532,127 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
 
       </form>
+
+      {/* SQL SCHEMA MIGRATION VIEWER MODAL */}
+      {isSqlModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+          <div className="w-full max-w-2xl bg-[#0c1322] border border-cyan-500/40 rounded-3xl p-6 shadow-2xl text-xs space-y-4 flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Database className="w-5 h-5 text-cyan-400" />
+                <div>
+                  <h3 className="text-sm font-bold text-white font-display">Supabase SQL Migration Script</h3>
+                  <p className="text-[10px] text-slate-400">Execute in your Supabase SQL Editor</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsSqlModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-3 bg-cyan-950/40 border border-cyan-500/30 rounded-xl text-cyan-300 text-[11px] leading-relaxed">
+              To setup your cloud database: Open <strong>Supabase Dashboard → SQL Editor → New Query</strong>, paste the script below, and click <strong>Run</strong>.
+            </div>
+
+            <div className="flex-1 overflow-y-auto bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-[10.5px] text-slate-300">
+              <pre className="whitespace-pre-wrap">
+{`-- ====================================================================
+-- SRI SENNAMAL FINANCE — SUPABASE POSTGRESQL PRODUCTION MIGRATION
+-- Owner: playwithsakthigaming@gmail.com
+-- ====================================================================
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- 1. BUSINESSES TABLE
+CREATE TABLE IF NOT EXISTS public.businesses (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    company_name TEXT NOT NULL DEFAULT 'Sri Sennamal Finance',
+    phone TEXT NOT NULL DEFAULT '7812834522',
+    email TEXT NOT NULL DEFAULT 'playwithsakthigaming@gmail.com',
+    address TEXT NOT NULL DEFAULT 'Coimbatore, Tamil Nadu, India',
+    currency TEXT NOT NULL DEFAULT 'INR',
+    currency_symbol TEXT NOT NULL DEFAULT '₹',
+    timezone TEXT NOT NULL DEFAULT 'Asia/Kolkata',
+    licence_number TEXT NOT NULL DEFAULT 'Licence No: Not provided',
+    licence_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('Asia/Kolkata', now()),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('Asia/Kolkata', now())
+);
+
+-- 2. OWNER ACCESS TABLE
+CREATE TABLE IF NOT EXISTS public.owner_access (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    owner_email TEXT UNIQUE NOT NULL,
+    auth_user_id UUID,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('Asia/Kolkata', now())
+);
+
+INSERT INTO public.owner_access (owner_email, is_active)
+VALUES ('playwithsakthigaming@gmail.com', TRUE)
+ON CONFLICT (owner_email) DO NOTHING;
+
+-- 3. CUSTOMERS TABLE
+CREATE TABLE IF NOT EXISTS public.customers (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    unique_id TEXT UNIQUE NOT NULL,
+    full_name TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    address TEXT NOT NULL,
+    loan_start_date DATE NOT NULL,
+    notes TEXT DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('Asia/Kolkata', now()),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('Asia/Kolkata', now())
+);
+
+-- 4. LOANS TABLE
+CREATE TABLE IF NOT EXISTS public.loans (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    loan_id TEXT UNIQUE NOT NULL,
+    customer_id UUID REFERENCES public.customers(id) ON DELETE CASCADE,
+    loan_type TEXT NOT NULL CHECK (loan_type IN ('standard_weekly', 'day_due_daily', 'sp_interest_only')),
+    original_principal NUMERIC(12, 2) NOT NULL,
+    actual_disbursement NUMERIC(12, 2) NOT NULL,
+    weekly_due_amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
+    loan_start_date DATE NOT NULL,
+    tenure_weeks INTEGER NOT NULL,
+    interest_method TEXT NOT NULL DEFAULT 'flat',
+    interest_rate_monthly NUMERIC(5, 2) DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'overdue', 'bad_debt')),
+    outstanding_principal NUMERIC(12, 2) NOT NULL,
+    outstanding_weekly_dues NUMERIC(12, 2) NOT NULL DEFAULT 0,
+    outstanding_interest NUMERIC(12, 2) NOT NULL DEFAULT 0,
+    outstanding_penalties NUMERIC(12, 2) NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('Asia/Kolkata', now())
+);
+
+-- (Complete migration script available in /supabase/migrations/20261023_initial_schema.sql)`}
+              </pre>
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-[10px] text-slate-500">File: /supabase/migrations/20261023_initial_schema.sql</span>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(`-- SRI SENNAMAL FINANCE SUPABASE MIGRATION\n-- See /supabase/migrations/20261023_initial_schema.sql`);
+                  setSqlCopied(true);
+                  setTimeout(() => setSqlCopied(false), 2000);
+                }}
+                className="px-4 py-2 rounded-xl bg-cyan-400 text-black font-bold flex items-center gap-1.5"
+              >
+                {sqlCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                <span>{sqlCopied ? 'Copied!' : 'Copy SQL Script'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

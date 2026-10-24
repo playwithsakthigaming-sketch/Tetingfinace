@@ -1,7 +1,7 @@
 /**
  * Sri Sennamal Finance — Dedicated Sole Owner Login Page
- * Full-screen gateway connecting to Supabase Auth & Cloud Database.
- * Sole owner authorization enforced for playwithsakthigaming@gmail.com.
+ * Full-screen gateway connecting to Supabase Auth.
+ * Clean, minimalistic login card for authorized owner: playwithsakthigaming@gmail.com.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -10,25 +10,18 @@ import {
   Mail,
   Eye,
   EyeOff,
-  ShieldCheck,
   AlertCircle,
   CheckCircle2,
   Database,
-  Copy,
   Sparkles,
   ArrowRight,
   RefreshCw,
-  Sliders,
-  Check,
 } from 'lucide-react';
 import {
   DESIGNATED_OWNER_EMAIL,
   isAuthorizedOwner,
   getSupabaseClient,
   getActiveSupabaseConfig,
-  saveCustomSupabaseConfig,
-  clearCustomSupabaseConfig,
-  testSupabaseConnection,
 } from '../services/supabase';
 
 interface LoginPageProps {
@@ -48,31 +41,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Supabase Configuration Modal State
-  const [isConfigModalOpen, setIsConfigModalOpen] = useState<boolean>(false);
+  // Supabase Configuration Status
   const [supabaseConfig, setSupabaseConfig] = useState(() => getActiveSupabaseConfig());
-  const [inputUrl, setInputUrl] = useState<string>(supabaseConfig.url || '');
-  const [inputKey, setInputKey] = useState<string>(supabaseConfig.anonKey || '');
-  const [testingConnection, setTestingConnection] = useState<boolean>(false);
-  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
-
-  // SQL Schema View Modal
-  const [isSqlModalOpen, setIsSqlModalOpen] = useState<boolean>(false);
-  const [sqlCopied, setSqlCopied] = useState<boolean>(false);
 
   // Refresh config state on mount
   useEffect(() => {
-    const config = getActiveSupabaseConfig();
-    setSupabaseConfig(config);
-    if (config.url) setInputUrl(config.url);
-    if (config.anonKey) setInputKey(config.anonKey);
+    setSupabaseConfig(getActiveSupabaseConfig());
   }, []);
-
-  // Quick preset email click
-  const handleUseDesignatedEmail = () => {
-    setEmail(DESIGNATED_OWNER_EMAIL);
-    setErrorMessage(null);
-  };
 
   // Sign In Handler with Supabase Auth
   const handleSignIn = async (e: React.FormEvent) => {
@@ -81,17 +56,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setSuccessMessage(null);
 
     const cleanEmail = email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    // Enforce designated owner identity verification
-    if (!isAuthorizedOwner(cleanEmail)) {
-      setErrorMessage(
-        'அங்கீகரிக்கப்படாத கணக்கு / Access Denied: Sri Sennamal Finance portal allows only the authorized owner (playwithsakthigaming@gmail.com).'
-      );
+    // Check if email format is valid or if email is not the authorized owner
+    if (!cleanEmail || !emailRegex.test(cleanEmail) || !isAuthorizedOwner(cleanEmail)) {
+      setErrorMessage('Invalid email address');
       return;
     }
 
     if (!password) {
-      setErrorMessage('Please enter your owner password.');
+      setErrorMessage('Incorrect password or email');
       return;
     }
 
@@ -107,7 +81,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         });
 
         if (error) {
-          setErrorMessage(`Supabase Auth: ${error.message}. Please verify your credentials or reset password.`);
+          setErrorMessage('Incorrect password or email');
           setIsLoading(false);
           return;
         }
@@ -115,26 +89,26 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         if (data.user) {
           if (!isAuthorizedOwner(data.user.email)) {
             await client.auth.signOut();
-            setErrorMessage('Access Denied: Logged in user email is not the authorized owner.');
+            setErrorMessage('Invalid email address');
             setIsLoading(false);
             return;
           }
 
-          setSuccessMessage('Supabase Authentication Verified! Opening management portal...');
+          setSuccessMessage('Authentication Successful! Opening management portal...');
           setTimeout(() => {
             onLoginSuccess(data.user.email || cleanEmail);
           }, 350);
         }
       } else {
-        // Fallback when Supabase is in local mode
+        // Fallback when Supabase credentials are in local mode
         await new Promise((resolve) => setTimeout(resolve, 350));
-        setSuccessMessage('Owner Verification Successful! Opening management portal...');
+        setSuccessMessage('Authentication Successful! Opening management portal...');
         setTimeout(() => {
           onLoginSuccess(cleanEmail);
         }, 300);
       }
     } catch (err: any) {
-      setErrorMessage(err?.message || 'Unexpected login error occurred.');
+      setErrorMessage('Incorrect password or email');
     } finally {
       setIsLoading(false);
     }
@@ -147,8 +121,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setSuccessMessage(null);
 
     const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail) {
-      setErrorMessage('Please enter email address.');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!cleanEmail || !emailRegex.test(cleanEmail) || !isAuthorizedOwner(cleanEmail)) {
+      setErrorMessage('Invalid email address');
       return;
     }
 
@@ -168,47 +143,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Test Supabase Connection in settings modal
-  const handleTestConnection = async () => {
-    setTestingConnection(true);
-    setTestResult(null);
-    try {
-      const res = await testSupabaseConnection(inputUrl, inputKey);
-      setTestResult(res);
-    } catch (e: any) {
-      setTestResult({ ok: false, message: e.message || 'Connection test failed' });
-    } finally {
-      setTestingConnection(false);
-    }
-  };
-
-  // Save Custom Supabase Credentials
-  const handleSaveSupabaseConfig = (e: React.FormEvent) => {
-    e.preventDefault();
-    const result = saveCustomSupabaseConfig(inputUrl, inputKey);
-    if (!result.success) {
-      setTestResult({ ok: false, message: result.error || 'Failed to save' });
-      return;
-    }
-
-    const updated = getActiveSupabaseConfig();
-    setSupabaseConfig(updated);
-    setTestResult({ ok: true, message: 'Supabase credentials saved successfully!' });
-    setTimeout(() => {
-      setIsConfigModalOpen(false);
-      setTestResult(null);
-    }, 800);
-  };
-
-  const handleClearConfig = () => {
-    clearCustomSupabaseConfig();
-    const updated = getActiveSupabaseConfig();
-    setSupabaseConfig(updated);
-    setInputUrl('');
-    setInputKey('');
-    setTestResult({ ok: true, message: 'Reset to local offline mode.' });
   };
 
   return (
@@ -249,10 +183,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           </div>
         </div>
 
-        {/* Supabase Status Pill & Settings Trigger */}
+        {/* Supabase Status Pill */}
         <div className="flex items-center gap-2">
           <div
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono border ${
               supabaseConfig.isConfigured
                 ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
                 : 'bg-amber-950/40 border-amber-500/40 text-amber-300'
@@ -265,15 +199,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 : 'Supabase: Local / Offline'}
             </span>
           </div>
-
-          <button
-            onClick={() => setIsConfigModalOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white transition-all shadow-sm"
-            title="Configure Supabase Project URL & Anon Key"
-          >
-            <Sliders className="w-3 h-3 text-cyan-400" />
-            <span className="hidden sm:inline">Supabase Setup</span>
-          </button>
         </div>
       </header>
 
@@ -352,16 +277,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           {activeTab === 'signin' && (
             <form onSubmit={handleSignIn} className="space-y-4 text-xs">
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-slate-300 font-semibold">Owner Email Address</label>
-                  <button
-                    type="button"
-                    onClick={handleUseDesignatedEmail}
-                    className="text-[10px] text-cyan-400 hover:underline"
-                  >
-                    Use Owner Email
-                  </button>
-                </div>
+                <label className="block text-slate-300 font-semibold mb-1.5">Owner Email Address</label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
@@ -372,10 +288,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                     placeholder="playwithsakthigaming@gmail.com"
                     className="w-full pl-9 pr-3 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-white font-mono focus:outline-none focus:border-cyan-400 transition-colors"
                   />
-                </div>
-                <div className="mt-1 flex items-center gap-1.5 text-[10px] text-slate-400">
-                  <ShieldCheck className="w-3 h-3 text-cyan-400 shrink-0" />
-                  <span>Designated Owner: <strong className="text-slate-300 font-mono">playwithsakthigaming@gmail.com</strong></span>
                 </div>
               </div>
 
@@ -479,27 +391,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             </form>
           )}
 
-          {/* Bottom Helpers & Quick Tools */}
-          <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-            <button
-              onClick={() => setIsSqlModalOpen(true)}
-              className="text-cyan-400 hover:underline flex items-center gap-1"
-            >
-              <Database className="w-3 h-3" />
-              <span>Supabase SQL Migration</span>
-            </button>
-
-            <span className="text-slate-500">·</span>
-
-            <button
-              onClick={() => setIsConfigModalOpen(true)}
-              className="text-slate-400 hover:text-white flex items-center gap-1"
-            >
-              <Sliders className="w-3 h-3 text-amber-400" />
-              <span>Connect DB</span>
-            </button>
-          </div>
-
         </div>
       </main>
 
@@ -512,240 +403,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           Single Owner Authorization Enforced · Row Level Security (RLS) Active
         </p>
       </footer>
-
-      {/* MODAL 1: SUPABASE CONFIGURATION MODAL */}
-      {isConfigModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-          <div className="w-full max-w-lg bg-[#0c1322] border border-cyan-500/40 rounded-3xl p-6 shadow-2xl text-xs space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-950/60 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
-                  <Database className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white font-display">Supabase Cloud Connection</h3>
-                  <p className="text-[10px] text-slate-400">Connect your Supabase project URL & Anon Public Key</p>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  setIsConfigModalOpen(false);
-                  setTestResult(null);
-                }}
-                className="text-slate-400 hover:text-white p-1 rounded-lg"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveSupabaseConfig} className="space-y-3">
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">
-                  Supabase Project URL (VITE_SUPABASE_URL) *
-                </label>
-                <input
-                  type="url"
-                  required
-                  placeholder="https://your-project-ref.supabase.co"
-                  value={inputUrl}
-                  onChange={(e) => setInputUrl(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono focus:border-cyan-400 focus:outline-none"
-                />
-                <span className="text-[10px] text-slate-500 mt-0.5 block">
-                  Found in Supabase Dashboard → Project Settings → API → Project URL
-                </span>
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">
-                  Supabase Anon Public API Key (VITE_SUPABASE_ANON_KEY) *
-                </label>
-                <textarea
-                  required
-                  rows={2}
-                  placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                  value={inputKey}
-                  onChange={(e) => setInputKey(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono focus:border-cyan-400 focus:outline-none text-[11px]"
-                />
-                <span className="text-[10px] text-slate-500 mt-0.5 block">
-                  Found in Supabase Dashboard → Project Settings → API → Project API Keys (anon public)
-                </span>
-              </div>
-
-              {testResult && (
-                <div
-                  className={`p-3 rounded-xl border text-xs flex items-start gap-2 ${
-                    testResult.ok
-                      ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
-                      : 'bg-rose-950/60 border-rose-500/40 text-rose-300'
-                  }`}
-                >
-                  {testResult.ok ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                  )}
-                  <span>{testResult.message}</span>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between pt-2">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={testingConnection || !inputUrl || !inputKey}
-                    onClick={handleTestConnection}
-                    className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-40"
-                  >
-                    {testingConnection ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />}
-                    <span>Test Connection</span>
-                  </button>
-
-                  {supabaseConfig.source === 'custom' && (
-                    <button
-                      type="button"
-                      onClick={handleClearConfig}
-                      className="px-2.5 py-2 text-rose-400 hover:text-rose-300 text-[11px]"
-                    >
-                      Clear Saved
-                    </button>
-                  )}
-                </div>
-
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-black font-bold shadow"
-                >
-                  Save & Connect
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 2: SQL SCHEMA MIGRATION VIEWER */}
-      {isSqlModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-          <div className="w-full max-w-2xl bg-[#0c1322] border border-cyan-500/40 rounded-3xl p-6 shadow-2xl text-xs space-y-4 flex flex-col max-h-[85vh]">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <Database className="w-5 h-5 text-cyan-400" />
-                <div>
-                  <h3 className="text-sm font-bold text-white font-display">Supabase SQL Migration Script</h3>
-                  <p className="text-[10px] text-slate-400">Copy & execute in your Supabase SQL Editor</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsSqlModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="p-3 bg-cyan-950/40 border border-cyan-500/30 rounded-xl text-cyan-300 text-[11px] leading-relaxed">
-              To create the database tables (customers, loans, installments, payments, ledger, businesses, tokens, RLS rules) in Supabase:
-              Open your <strong>Supabase Dashboard → SQL Editor → New Query</strong>, paste the script below, and click <strong>Run</strong>.
-            </div>
-
-            <div className="flex-1 overflow-y-auto bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-[10.5px] text-slate-300">
-              <pre className="whitespace-pre-wrap">
-{`-- ====================================================================
--- SRI SENNAMAL FINANCE — SUPABASE POSTGRESQL PRODUCTION MIGRATION
--- Owner: playwithsakthigaming@gmail.com
--- ====================================================================
-
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-
--- 1. BUSINESSES TABLE
-CREATE TABLE IF NOT EXISTS public.businesses (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    company_name TEXT NOT NULL DEFAULT 'Sri Sennamal Finance',
-    phone TEXT NOT NULL DEFAULT '7812834522',
-    email TEXT NOT NULL DEFAULT 'playwithsakthigaming@gmail.com',
-    address TEXT NOT NULL DEFAULT 'Coimbatore, Tamil Nadu, India',
-    currency TEXT NOT NULL DEFAULT 'INR',
-    currency_symbol TEXT NOT NULL DEFAULT '₹',
-    timezone TEXT NOT NULL DEFAULT 'Asia/Kolkata',
-    licence_number TEXT NOT NULL DEFAULT 'Licence No: Not provided',
-    licence_verified BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('Asia/Kolkata', now()),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('Asia/Kolkata', now())
-);
-
--- 2. OWNER ACCESS TABLE
-CREATE TABLE IF NOT EXISTS public.owner_access (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    owner_email TEXT UNIQUE NOT NULL,
-    auth_user_id UUID,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('Asia/Kolkata', now())
-);
-
-INSERT INTO public.owner_access (owner_email, is_active)
-VALUES ('playwithsakthigaming@gmail.com', TRUE)
-ON CONFLICT (owner_email) DO NOTHING;
-
--- 3. CUSTOMERS TABLE
-CREATE TABLE IF NOT EXISTS public.customers (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    unique_id TEXT UNIQUE NOT NULL,
-    full_name TEXT NOT NULL,
-    phone TEXT NOT NULL,
-    address TEXT NOT NULL,
-    loan_start_date DATE NOT NULL,
-    notes TEXT DEFAULT '',
-    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('Asia/Kolkata', now()),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('Asia/Kolkata', now())
-);
-
--- 4. LOANS TABLE
-CREATE TABLE IF NOT EXISTS public.loans (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    loan_id TEXT UNIQUE NOT NULL,
-    customer_id UUID REFERENCES public.customers(id) ON DELETE CASCADE,
-    loan_type TEXT NOT NULL CHECK (loan_type IN ('standard_weekly', 'day_due_daily', 'sp_interest_only')),
-    original_principal NUMERIC(12, 2) NOT NULL,
-    actual_disbursement NUMERIC(12, 2) NOT NULL,
-    weekly_due_amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
-    loan_start_date DATE NOT NULL,
-    tenure_weeks INTEGER NOT NULL,
-    interest_method TEXT NOT NULL DEFAULT 'flat',
-    interest_rate_monthly NUMERIC(5, 2) DEFAULT 0,
-    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'overdue', 'bad_debt')),
-    outstanding_principal NUMERIC(12, 2) NOT NULL,
-    outstanding_weekly_dues NUMERIC(12, 2) NOT NULL DEFAULT 0,
-    outstanding_interest NUMERIC(12, 2) NOT NULL DEFAULT 0,
-    outstanding_penalties NUMERIC(12, 2) NOT NULL DEFAULT 0,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('Asia/Kolkata', now())
-);
-
--- (Full schema available in /supabase/migrations/20261023_initial_schema.sql)`}
-              </pre>
-            </div>
-
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-[10px] text-slate-500">File: /supabase/migrations/20261023_initial_schema.sql</span>
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText(`-- SRI SENNAMAL FINANCE SUPABASE MIGRATION\n-- See /supabase/migrations/20261023_initial_schema.sql`);
-                  setSqlCopied(true);
-                  setTimeout(() => setSqlCopied(false), 2000);
-                }}
-                className="px-4 py-2 rounded-xl bg-cyan-400 text-black font-bold flex items-center gap-1.5"
-              >
-                {sqlCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                <span>{sqlCopied ? 'Copied!' : 'Copy SQL Script'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
   );
