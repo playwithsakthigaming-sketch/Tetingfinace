@@ -31,6 +31,7 @@ import { Customer, Loan, Payment, PassbookData, UserProfile, ROLE_PERMISSIONS } 
 import { DESIGNATED_OWNER_EMAIL, getSupabaseClient, isAuthorizedOwner } from './services/supabase';
 import { userService, subscribeToUserProfiles } from './services/userService';
 import { formatCoveredWeeksSummary } from './utils/financeCalculations';
+import { MouseAtmosphere } from './components/MouseAtmosphere';
 
 export default function App() {
   const [storeState, setStoreState] = useState(() => financeStore.getState());
@@ -57,6 +58,21 @@ export default function App() {
     });
     return unsubscribe;
   }, [storeState.currentUserEmail]);
+
+  // Auto-redirect collection team if navigating to a restricted view
+  useEffect(() => {
+    if (currentProfile.role === 'collection_team') {
+      const restrictedForAgent = ['refunds', 'ledger', 'reports', 'autosave', 'tests', 'settings'];
+      if (restrictedForAgent.includes(currentTab)) {
+        setCurrentTab('collections');
+      }
+    } else if (currentProfile.role === 'manager') {
+      const restrictedForManager = ['autosave', 'tests', 'settings'];
+      if (restrictedForManager.includes(currentTab)) {
+        setCurrentTab('dashboard');
+      }
+    }
+  }, [currentProfile.role, currentTab]);
   
   // Receipt Modal
   const [activeReceiptPayment, setActiveReceiptPayment] = useState<Payment | null>(null);
@@ -327,23 +343,8 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#050811] text-slate-100 relative overflow-x-hidden">
       
-      {/* Respectful Saraswati Themed Background Watermark & Light Glow Accents */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        {/* Deep ambient radial glow */}
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-purple-900/15 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 -right-40 w-96 h-96 bg-cyan-900/15 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 left-1/3 w-96 h-96 bg-indigo-900/15 rounded-full blur-3xl" />
-        
-        {/* Respectful Sacred Geometry / Veena & Lotus Watermark Overlay */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.035] select-none">
-          <svg width="600" height="600" viewBox="0 0 200 200" fill="none" stroke="currentColor">
-            <circle cx="100" cy="100" r="80" strokeWidth="1" strokeDasharray="4 4" className="text-cyan-400" />
-            <circle cx="100" cy="100" r="60" strokeWidth="1.5" className="text-purple-400" />
-            <polygon points="100,25 125,75 180,75 135,110 155,165 100,135 45,165 65,110 20,75 75,75" strokeWidth="1" className="text-cyan-300" />
-            <ellipse cx="100" cy="100" rx="40" ry="20" strokeWidth="1" className="text-purple-300" />
-          </svg>
-        </div>
-      </div>
+      {/* Interactive Gold & Electric Blue Animated Atmosphere & Mouse Follower */}
+      <MouseAtmosphere />
 
       {/* Main Content Viewport */}
       <div className="relative z-10 flex flex-col min-h-screen">
@@ -403,6 +404,7 @@ export default function App() {
                 setPreSelectedLoanId(loanId);
                 setCurrentTab('loans');
               }}
+              canManageCustomers={ROLE_PERMISSIONS[currentProfile.role]?.canManageCustomers ?? false}
             />
           )}
 
@@ -421,6 +423,7 @@ export default function App() {
                 setCurrentTab('multiple_due');
               }}
               onOpenPassbookInApp={handleOpenPassbookInApp}
+              canCreateLoan={ROLE_PERMISSIONS[currentProfile.role]?.canCreateLoan ?? false}
             />
           )}
 
@@ -552,37 +555,127 @@ export default function App() {
           )}
 
           {currentTab === 'ledger' && (
-            <CustomerLedgerView
-              ledger={storeState.ledger}
-              loans={storeState.loans}
-              customers={storeState.customers}
-            />
+            (ROLE_PERMISSIONS[currentProfile.role]?.canViewLedger ?? false) ? (
+              <CustomerLedgerView
+                ledger={storeState.ledger}
+                loans={storeState.loans}
+                customers={storeState.customers}
+              />
+            ) : (
+              <div className="max-w-xl mx-auto p-8 rounded-2xl neon-card text-center space-y-3 border border-amber-500/30 my-8">
+                <div className="w-12 h-12 rounded-2xl bg-amber-950/60 border border-amber-500/40 text-amber-400 mx-auto flex items-center justify-center text-xl font-bold">
+                  🔒
+                </div>
+                <h3 className="text-base font-bold text-white font-display">
+                  Ledger Restricted (பேரேடு அனுமதி வரம்பு)
+                </h3>
+                <p className="text-xs text-slate-300">
+                  Logged in as <strong>{currentProfile.displayName}</strong> [{currentProfile.role.toUpperCase()}]. Viewing detailed borrower ledgers requires Administrator or Manager role.
+                </p>
+                <div className="pt-2">
+                  <button
+                    onClick={() => setCurrentTab('collections')}
+                    className="px-4 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-black font-bold text-xs cursor-pointer"
+                  >
+                    Back to Collections Desk
+                  </button>
+                </div>
+              </div>
+            )
           )}
 
           {currentTab === 'reports' && (
-            <ReportsView
-              payments={storeState.payments}
-              refunds={storeState.refunds}
-              loans={storeState.loans}
-              customers={storeState.customers}
-              installments={storeState.installments}
-            />
+            (ROLE_PERMISSIONS[currentProfile.role]?.canViewFinancialReports ?? false) ? (
+              <ReportsView
+                payments={storeState.payments}
+                refunds={storeState.refunds}
+                loans={storeState.loans}
+                customers={storeState.customers}
+                installments={storeState.installments}
+              />
+            ) : (
+              <div className="max-w-xl mx-auto p-8 rounded-2xl neon-card text-center space-y-3 border border-amber-500/30 my-8">
+                <div className="w-12 h-12 rounded-2xl bg-amber-950/60 border border-amber-500/40 text-amber-400 mx-auto flex items-center justify-center text-xl font-bold">
+                  🔒
+                </div>
+                <h3 className="text-base font-bold text-white font-display">
+                  Financial Reports Restricted (அறிக்கைகள் அனுமதி வரம்பு)
+                </h3>
+                <p className="text-xs text-slate-300">
+                  Financial collection reports and metrics are accessible exclusively to Manager and Administrator accounts.
+                </p>
+                <div className="pt-2">
+                  <button
+                    onClick={() => setCurrentTab('collections')}
+                    className="px-4 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-black font-bold text-xs cursor-pointer"
+                  >
+                    Back to Collections Desk
+                  </button>
+                </div>
+              </div>
+            )
           )}
 
           {currentTab === 'autosave' && (
-            <AutoSaveRestoreView
-              autoSaveStatus={storeState.autoSaveStatus}
-              lastSavedAt={storeState.lastSavedAt}
-              recoveryPoints={storeState.recoveryPoints}
-              onTriggerAutoSave={() => financeStore.triggerAutoSave()}
-              onCreateRecoveryPoint={(note) => financeStore.createRecoveryPoint(note)}
-              onRestoreRecoveryPoint={(id) => financeStore.restoreRecoveryPoint(id)}
-              ownerEmail={storeState.currentUserEmail}
-              onOpenClearData={() => setIsClearDataOpen(true)}
-            />
+            currentProfile.role === 'admin' ? (
+              <AutoSaveRestoreView
+                autoSaveStatus={storeState.autoSaveStatus}
+                lastSavedAt={storeState.lastSavedAt}
+                recoveryPoints={storeState.recoveryPoints}
+                onTriggerAutoSave={() => financeStore.triggerAutoSave()}
+                onCreateRecoveryPoint={(note) => financeStore.createRecoveryPoint(note)}
+                onRestoreRecoveryPoint={(id) => financeStore.restoreRecoveryPoint(id)}
+                ownerEmail={storeState.currentUserEmail}
+                onOpenClearData={() => setIsClearDataOpen(true)}
+              />
+            ) : (
+              <div className="max-w-xl mx-auto p-8 rounded-2xl neon-card text-center space-y-3 border border-purple-500/30 my-8">
+                <div className="w-12 h-12 rounded-2xl bg-purple-950/60 border border-purple-500/40 text-purple-400 mx-auto flex items-center justify-center text-xl font-bold">
+                  🔒
+                </div>
+                <h3 className="text-base font-bold text-white font-display">
+                  System Backup Restricted to Administrator
+                </h3>
+                <p className="text-xs text-slate-300">
+                  Database backups and system recovery points are managed exclusively by the Administrator.
+                </p>
+                <div className="pt-2">
+                  <button
+                    onClick={() => setCurrentTab('collections')}
+                    className="px-4 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-black font-bold text-xs cursor-pointer"
+                  >
+                    Back to Collections Desk
+                  </button>
+                </div>
+              </div>
+            )
           )}
 
-          {currentTab === 'tests' && <AutomatedTestsView />}
+          {currentTab === 'tests' && (
+            currentProfile.role === 'admin' ? (
+              <AutomatedTestsView />
+            ) : (
+              <div className="max-w-xl mx-auto p-8 rounded-2xl neon-card text-center space-y-3 border border-purple-500/30 my-8">
+                <div className="w-12 h-12 rounded-2xl bg-purple-950/60 border border-purple-500/40 text-purple-400 mx-auto flex items-center justify-center text-xl font-bold">
+                  🔒
+                </div>
+                <h3 className="text-base font-bold text-white font-display">
+                  Automated Tests Restricted to Administrator
+                </h3>
+                <p className="text-xs text-slate-300">
+                  Financial calculation test suites are reserved for Administrator verification.
+                </p>
+                <div className="pt-2">
+                  <button
+                    onClick={() => setCurrentTab('collections')}
+                    className="px-4 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-black font-bold text-xs cursor-pointer"
+                  >
+                    Back to Collections Desk
+                  </button>
+                </div>
+              </div>
+            )
+          )}
 
           {currentTab === 'settings' && (
             (ROLE_PERMISSIONS[currentProfile.role]?.canManageSettings ?? false) ? (
@@ -698,15 +791,17 @@ export default function App() {
         }}
       />
 
-      {/* 4. Clear All Data (Factory Reset) Modal */}
-      <ClearDataModal
-        isOpen={isClearDataOpen}
-        onClose={() => setIsClearDataOpen(false)}
-        customerCount={storeState.customers.length}
-        loanCount={storeState.loans.length}
-        paymentCount={storeState.payments.length}
-        onCleared={() => setCurrentTab('dashboard')}
-      />
+      {/* 4. Clear All Data (Factory Reset) Modal — Strictly Admin Only */}
+      {currentProfile.role === 'admin' && (
+        <ClearDataModal
+          isOpen={isClearDataOpen}
+          onClose={() => setIsClearDataOpen(false)}
+          customerCount={storeState.customers.length}
+          loanCount={storeState.loans.length}
+          paymentCount={storeState.payments.length}
+          onCleared={() => setCurrentTab('dashboard')}
+        />
+      )}
 
     </div>
   );

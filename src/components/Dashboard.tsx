@@ -109,7 +109,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     <div className="space-y-5 pb-24">
       
       {/* 1. Hero Context Card matching screenshot */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-[#08101e] border border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl">
+      <div className="p-4 sm:p-5 rounded-2xl neon-card flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-lg sm:text-xl font-bold text-white font-display">
@@ -137,7 +137,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           {/* Record Collection Button */}
           <button
             onClick={() => onOpenPaymentModal()}
-            className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-[#0084ff] hover:bg-[#0070da] rounded-xl transition-colors whitespace-nowrap shadow-[0_0_15px_rgba(0,132,255,0.35)]"
+            className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-black bg-[#00e5ff] hover:bg-[#38bdf8] rounded-xl transition-all whitespace-nowrap shadow-[0_0_15px_rgba(0,229,255,0.4)] active:scale-95"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
             <span>Record Collection</span>
@@ -155,7 +155,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* 2. FINANCIAL HEALTH & COLLECTIONS SUMMARY */}
       <div>
         <div className="flex items-center justify-between mb-2.5 text-xs">
-          <span className="text-[11px] font-mono tracking-wider uppercase text-slate-400 font-semibold">
+          <span className="text-[11px] font-mono tracking-wider uppercase text-cyan-400 font-semibold flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#fbbf24] animate-pulse" />
             FINANCIAL HEALTH & COLLECTIONS SUMMARY
           </span>
           <span className="text-[11px] text-slate-400 font-mono">
@@ -163,34 +164,34 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </span>
         </div>
 
-        {/* 4x3 Grid + Overdue Box */}
+        {/* 4x3 Grid + Overdue Box — All animated with Gold & Electric Blue running borders */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3.5">
           
           {/* Row 1, Col 1: Total Customers */}
-          <div className="p-4 rounded-xl bg-[#08101e] border border-slate-800/80 relative hover:border-cyan-500/30 transition-colors">
+          <div className="p-4 grid-box-running">
             <div className="flex items-start justify-between">
-              <span className="text-xs text-slate-400 font-medium">Total Customers</span>
-              <Users className="w-4 h-4 text-cyan-400" />
+              <span className="text-xs text-slate-300 font-medium">Total Customers</span>
+              <Users className="w-4 h-4 text-[#00e5ff]" />
             </div>
             <div className="text-2xl font-bold text-white font-tabular mt-1.5">{totalCustomers}</div>
-            <div className="text-[11px] text-slate-400 mt-1">Active accounts</div>
+            <div className="text-[11px] text-[#fbbf24] mt-1 font-medium">Active accounts</div>
           </div>
 
           {/* Row 1, Col 2: Active Loans */}
-          <div className="p-4 rounded-xl bg-[#08101e] border border-slate-800/80 relative hover:border-blue-500/30 transition-colors">
+          <div className="p-4 grid-box-running">
             <div className="flex items-start justify-between">
-              <span className="text-xs text-slate-400 font-medium">Active Loans</span>
-              <FileText className="w-4 h-4 text-blue-400" />
+              <span className="text-xs text-slate-300 font-medium">Active Loans</span>
+              <FileText className="w-4 h-4 text-[#00e5ff]" />
             </div>
             <div className="text-2xl font-bold text-white font-tabular mt-1.5">{activeLoans}</div>
             <div className="text-[11px] text-slate-400 mt-1">Weekly & SP contracts</div>
           </div>
 
           {/* Row 1, Col 3: Principal Outstanding */}
-          <div className="p-4 rounded-xl bg-[#08101e] border border-slate-800/80 relative hover:border-purple-500/30 transition-colors">
+          <div className="p-4 grid-box-running">
             <div className="flex items-start justify-between">
-              <span className="text-xs text-slate-400 font-medium">Principal Outstanding</span>
-              <LinkIcon className="w-4 h-4 text-purple-400" />
+              <span className="text-xs text-slate-300 font-medium">Principal Outstanding</span>
+              <LinkIcon className="w-4 h-4 text-[#fbbf24]" />
             </div>
             <div className="text-2xl font-bold text-white font-tabular mt-1.5">
               {formatIndianCurrency(principalOutstanding)}
@@ -199,9 +200,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           {/* Row 1, Col 4: Today's Collections */}
-          <div className="p-4 rounded-xl bg-[#08101e] border border-slate-800/80 relative hover:border-emerald-500/30 transition-colors">
+          <div className="p-4 grid-box-running">
             <div className="flex items-start justify-between">
-              <span className="text-xs text-slate-400 font-medium">Today's Collections</span>
+              <span className="text-xs text-slate-300 font-medium">Today's Collections</span>
               <TrendingUp className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="text-2xl font-bold text-emerald-400 font-tabular mt-1.5">
@@ -211,45 +212,45 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           {/* Row 2, Col 1: Weekly Dues Collected */}
-          <div className="p-4 rounded-xl bg-[#08101e] border border-slate-800/80 relative hover:border-cyan-500/30 transition-colors">
+          <div className="p-4 grid-box-running">
             <div className="flex items-start justify-between">
-              <span className="text-xs text-slate-400 font-medium">Weekly Dues Collected</span>
-              <CheckCircle2 className="w-4 h-4 text-cyan-400" />
+              <span className="text-xs text-slate-300 font-medium">Weekly Dues Collected</span>
+              <CheckCircle2 className="w-4 h-4 text-[#00e5ff]" />
             </div>
-            <div className="text-2xl font-bold text-cyan-400 font-tabular mt-1.5">
+            <div className="text-2xl font-bold text-[#00e5ff] font-tabular mt-1.5">
               {formatIndianCurrency(weeklyDuesCollected)}
             </div>
             <div className="text-[11px] text-slate-400 mt-1">Total installments paid</div>
           </div>
 
           {/* Row 2, Col 2: Weekly Dues Pending */}
-          <div className="p-4 rounded-xl bg-[#08101e] border border-slate-800/80 relative hover:border-amber-500/30 transition-colors">
+          <div className="p-4 grid-box-running">
             <div className="flex items-start justify-between">
-              <span className="text-xs text-slate-400 font-medium">Weekly Dues Pending</span>
-              <Clock className="w-4 h-4 text-amber-400" />
+              <span className="text-xs text-slate-300 font-medium">Weekly Dues Pending</span>
+              <Clock className="w-4 h-4 text-[#fbbf24]" />
             </div>
-            <div className="text-2xl font-bold text-amber-400 font-tabular mt-1.5">
+            <div className="text-2xl font-bold text-[#fbbf24] font-tabular mt-1.5">
               {formatIndianCurrency(weeklyDuesPending)}
             </div>
             <div className="text-[11px] text-slate-400 mt-1">Scheduled installments</div>
           </div>
 
           {/* Row 2, Col 3: Interest Collected */}
-          <div className="p-4 rounded-xl bg-[#08101e] border border-slate-800/80 relative hover:border-cyan-500/30 transition-colors">
+          <div className="p-4 grid-box-running">
             <div className="flex items-start justify-between">
-              <span className="text-xs text-slate-400 font-medium">Interest Collected</span>
-              <Percent className="w-4 h-4 text-cyan-400" />
+              <span className="text-xs text-slate-300 font-medium">Interest Collected</span>
+              <Percent className="w-4 h-4 text-[#00e5ff]" />
             </div>
-            <div className="text-2xl font-bold text-cyan-400 font-tabular mt-1.5">
+            <div className="text-2xl font-bold text-[#00e5ff] font-tabular mt-1.5">
               {formatIndianCurrency(interestCollected)}
             </div>
             <div className="text-[11px] text-slate-400 mt-1">SP Loan monthly/weekly interest</div>
           </div>
 
           {/* Row 2, Col 4: Interest Outstanding */}
-          <div className="p-4 rounded-xl bg-[#08101e] border border-slate-800/80 relative hover:border-purple-500/30 transition-colors">
+          <div className="p-4 grid-box-running">
             <div className="flex items-start justify-between">
-              <span className="text-xs text-slate-400 font-medium">Interest Outstanding</span>
+              <span className="text-xs text-slate-300 font-medium">Interest Outstanding</span>
               <Percent className="w-4 h-4 text-purple-400" />
             </div>
             <div className="text-2xl font-bold text-white font-tabular mt-1.5">
@@ -259,10 +260,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           {/* Row 3, Col 1: Penalties Collected */}
-          <div className="p-4 rounded-xl bg-[#08101e] border border-slate-800/80 relative hover:border-cyan-500/30 transition-colors">
+          <div className="p-4 grid-box-running">
             <div className="flex items-start justify-between">
-              <span className="text-xs text-slate-400 font-medium">Penalties Collected</span>
-              <CheckCircle2 className="w-4 h-4 text-cyan-400" />
+              <span className="text-xs text-slate-300 font-medium">Penalties Collected</span>
+              <CheckCircle2 className="w-4 h-4 text-[#00e5ff]" />
             </div>
             <div className="text-2xl font-bold text-white font-tabular mt-1.5">
               {formatIndianCurrency(penaltiesCollected)}
@@ -271,9 +272,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           {/* Row 3, Col 2: Penalties Outstanding */}
-          <div className="p-4 rounded-xl bg-[#08101e] border border-slate-800/80 relative hover:border-rose-500/30 transition-colors">
+          <div className="p-4 grid-box-running">
             <div className="flex items-start justify-between">
-              <span className="text-xs text-slate-400 font-medium">Penalties Outstanding</span>
+              <span className="text-xs text-slate-300 font-medium">Penalties Outstanding</span>
               <AlertTriangle className="w-4 h-4 text-rose-400" />
             </div>
             <div className="text-2xl font-bold text-rose-400 font-tabular mt-1.5">
@@ -283,9 +284,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           {/* Row 3, Col 3: Refunds Issued */}
-          <div className="p-4 rounded-xl bg-[#08101e] border border-slate-800/80 relative hover:border-purple-500/30 transition-colors">
+          <div className="p-4 grid-box-running">
             <div className="flex items-start justify-between">
-              <span className="text-xs text-slate-400 font-medium">Refunds Issued</span>
+              <span className="text-xs text-slate-300 font-medium">Refunds Issued</span>
               <RotateCcw className="w-4 h-4 text-purple-400" />
             </div>
             <div className="text-2xl font-bold text-white font-tabular mt-1.5">
@@ -295,19 +296,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           {/* Row 3, Col 4: Net Collections */}
-          <div className="p-4 rounded-xl bg-[#08101e] border border-slate-800/80 relative hover:border-cyan-500/30 transition-colors">
+          <div className="p-4 grid-box-running">
             <div className="flex items-start justify-between">
-              <span className="text-xs text-slate-400 font-medium">Net Collections</span>
-              <Sparkles className="w-4 h-4 text-cyan-400" />
+              <span className="text-xs text-slate-300 font-medium">Net Collections</span>
+              <Sparkles className="w-4 h-4 text-[#fbbf24]" />
             </div>
-            <div className="text-2xl font-bold text-cyan-300 font-tabular mt-1.5">
+            <div className="text-2xl font-bold text-[#00e5ff] font-tabular mt-1.5">
               {formatIndianCurrency(netCollections)}
             </div>
-            <div className="text-[11px] text-cyan-400 mt-1">Gross minus refunds</div>
+            <div className="text-[11px] text-[#fbbf24] mt-1 font-medium">Gross minus refunds</div>
           </div>
 
-          {/* Row 4: Overdue Installments (Dark Plum / Crimson card) */}
-          <div className="p-4 rounded-xl bg-[#1c0d16] border border-rose-900/60 relative col-span-2 lg:col-span-1">
+          {/* Row 4: Overdue Installments */}
+          <div className="p-4 grid-box-running col-span-2 lg:col-span-1 border-rose-500/40">
             <div className="flex items-start justify-between">
               <span className="text-xs text-rose-300 font-medium">Overdue Installments</span>
               <AlertTriangle className="w-4 h-4 text-rose-400" />
@@ -320,7 +321,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* 3. Active Loan Book & Weekly Schedules Card matching screenshot */}
-      <div className="rounded-2xl bg-[#08101e] border border-slate-800/80 p-5 shadow-xl space-y-4">
+      <div className="rounded-2xl neon-card p-5 shadow-xl space-y-4">
         
         {/* Card Header & Filter Row */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -467,7 +468,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* 4. Recent Verified Collections Card matching screenshot */}
-      <div className="rounded-2xl bg-[#08101e] border border-slate-800/80 p-5 shadow-xl space-y-4">
+      <div className="rounded-2xl neon-card p-5 shadow-xl space-y-4">
         
         <div className="flex items-center justify-between pb-2 border-b border-slate-800/70">
           <h2 className="text-base font-bold text-white font-display">

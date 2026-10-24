@@ -30,7 +30,11 @@
 
 /* Dark Neon Saraswati Glowing Utilities */
 .neon-glow-cyan {
-  box-shadow: 0 0 20px -3px rgba(6, 182, 212, 0.25), inset 0 0 12px -3px rgba(6, 182, 212, 0.1);
+  box-shadow: 0 0 20px -3px rgba(6, 182, 212, 0.35), inset 0 0 12px -3px rgba(6, 182, 212, 0.15);
+}
+
+.neon-glow-gold {
+  box-shadow: 0 0 20px -3px rgba(251, 191, 36, 0.35), inset 0 0 12px -3px rgba(251, 191, 36, 0.15);
 }
 
 .neon-glow-purple {
@@ -38,27 +42,188 @@
 }
 
 .neon-glow-blue {
-  box-shadow: 0 0 20px -3px rgba(59, 130, 246, 0.25), inset 0 0 12px -3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 20px -3px rgba(59, 130, 246, 0.3), inset 0 0 12px -3px rgba(59, 130, 246, 0.12);
 }
 
 .neon-glow-amber {
-  box-shadow: 0 0 20px -3px rgba(245, 158, 11, 0.25), inset 0 0 12px -3px rgba(245, 158, 11, 0.1);
+  box-shadow: 0 0 20px -3px rgba(245, 158, 11, 0.3), inset 0 0 12px -3px rgba(245, 158, 11, 0.12);
 }
 
 .neon-border-subtle {
   border: 1px solid rgba(6, 182, 212, 0.2);
 }
 
-.neon-card {
-  background: linear-gradient(135deg, rgba(12, 19, 34, 0.95) 0%, rgba(17, 26, 46, 0.85) 100%);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(99, 102, 241, 0.18);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+/* ============================================================ */
+/* RUNNING ANIMATION EFFECT ON ALL GRID BOXES (Gold & Electric Blue) */
+/* ============================================================ */
+
+@keyframes runBorderBeam {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
-.neon-card:hover {
-  border-color: rgba(6, 182, 212, 0.4);
-  box-shadow: 0 0 24px -5px rgba(6, 182, 212, 0.2);
+@keyframes floatOrb1 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(35px, -50px) scale(1.12);
+  }
+  66% {
+    transform: translate(-30px, 35px) scale(0.92);
+  }
+}
+
+@keyframes floatOrb2 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(-45px, 45px) scale(0.9);
+  }
+  66% {
+    transform: translate(30px, -40px) scale(1.1);
+  }
+}
+
+@keyframes floatOrb3 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  50% {
+    transform: translate(25px, 30px) scale(1.08);
+  }
+}
+
+@keyframes pingExpand {
+  0% {
+    width: 0px;
+    height: 0px;
+    opacity: 0.9;
+  }
+  100% {
+    width: 140px;
+    height: 140px;
+    opacity: 0;
+  }
+}
+
+@keyframes dustDrift {
+  0% {
+    transform: translateY(0px) scale(0.8);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.7;
+  }
+  80% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(-160px) scale(1.1);
+    opacity: 0;
+  }
+}
+
+.animate-float-slow-1 {
+  animation: floatOrb1 18s ease-in-out infinite;
+}
+
+.animate-float-slow-2 {
+  animation: floatOrb2 22s ease-in-out infinite;
+}
+
+.animate-float-slow-3 {
+  animation: floatOrb3 16s ease-in-out infinite;
+}
+
+.animate-ping-expand {
+  animation: pingExpand 0.65s cubic-bezier(0, 0, 0.2, 1) forwards;
+}
+
+.animate-dust {
+  animation: dustDrift 14s ease-in-out infinite;
+}
+
+/* Master Running Border Card (Used across all grid boxes and panels) */
+.neon-card, .grid-box-running {
+  position: relative;
+  background: linear-gradient(135deg, rgba(8, 14, 28, 0.96) 0%, rgba(13, 21, 39, 0.92) 100%);
+  backdrop-filter: blur(14px);
+  border-radius: 1rem;
+  border: 1px solid rgba(0, 229, 255, 0.22);
+  overflow: hidden;
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.24s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.24s ease;
+}
+
+/* 1. Continuous running light border beam in Electric Blue & Gold */
+.neon-card::before, .grid-box-running::before {
+  content: '';
+  position: absolute;
+  inset: -150%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(0, 229, 255, 0.9) 35deg,
+    rgba(251, 191, 36, 0.95) 75deg,
+    transparent 120deg,
+    transparent 180deg,
+    rgba(0, 229, 255, 0.9) 215deg,
+    rgba(251, 191, 36, 0.95) 255deg,
+    transparent 300deg,
+    transparent 360deg
+  );
+  animation: runBorderBeam 7.5s linear infinite;
+  opacity: 0.38;
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+/* 2. Dark glass inner body that masks the center, leaving a glowing 1px running border */
+.neon-card::after, .grid-box-running::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  background: linear-gradient(135deg, rgba(7, 12, 24, 0.97) 0%, rgba(11, 18, 34, 0.95) 100%);
+  border-radius: calc(1rem - 1px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Ensure all interactive controls and texts inside cards sit above the effect layers */
+.neon-card > *, .grid-box-running > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* 3. Mouse Interact Reactive Animation (Electric Blue & Gold Sheen) */
+.neon-card:hover, .grid-box-running:hover {
+  transform: translateY(-2.5px);
+  border-color: rgba(0, 229, 255, 0.55);
+  box-shadow:
+    0 12px 36px -10px rgba(0, 229, 255, 0.3),
+    0 0 25px -4px rgba(251, 191, 36, 0.28),
+    inset 0 0 16px -6px rgba(0, 229, 255, 0.15);
+}
+
+.neon-card:hover::before, .grid-box-running:hover::before {
+  opacity: 0.95;
+  filter: brightness(1.2);
+  animation-duration: 3.8s;
+}
+
+/* Respect user's reduced motion settings */
+@media (prefers-reduced-motion: reduce) {
+  .neon-card::before, .grid-box-running::before,
+  .animate-float-slow-1, .animate-float-slow-2, .animate-float-slow-3,
+  .animate-dust {
+    animation: none !important;
+  }
 }
 
 /* Custom Scrollbar */

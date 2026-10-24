@@ -38,6 +38,7 @@ interface CustomerManagementProps {
   onRevokeToken: (tokenId: string) => void;
   onOpenPassbookInApp: (tokenStr: string) => void;
   onSelectCustomerLoan: (loanId: string) => void;
+  canManageCustomers?: boolean;
 }
 
 export const CustomerManagement: React.FC<CustomerManagementProps> = ({
@@ -52,6 +53,7 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
   onRevokeToken,
   onOpenPassbookInApp,
   onSelectCustomerLoan,
+  canManageCustomers = true,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -174,13 +176,19 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
               className="pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 w-64 sm:w-72"
             />
           </div>
-          <button
-            onClick={handleOpenAdd}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-black bg-cyan-400 hover:bg-cyan-300 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-colors whitespace-nowrap"
-          >
-            <Plus className="w-4 h-4" />
-            Add Customer
-          </button>
+          {canManageCustomers ? (
+            <button
+              onClick={handleOpenAdd}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-black bg-cyan-400 hover:bg-cyan-300 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-colors whitespace-nowrap cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              Add Customer
+            </button>
+          ) : (
+            <span className="text-[10px] text-cyan-300 font-mono px-2.5 py-1.5 rounded-lg bg-cyan-950/60 border border-cyan-800/50 whitespace-nowrap">
+              Agent Look-up Mode
+            </span>
+          )}
         </div>
       </div>
 

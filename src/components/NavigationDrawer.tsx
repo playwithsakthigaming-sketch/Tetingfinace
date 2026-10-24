@@ -72,18 +72,32 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
     ? 'M'
     : 'C';
 
-  const links = [
+  const userRole = currentProfile.role;
+  const isAdmin = userRole === 'admin';
+  const isManager = userRole === 'manager';
+  const isAgent = userRole === 'collection_team';
+
+  // 1. Core Collection Desk Operations (Open to all roles)
+  const coreLinks = [
+    { id: 'collections', label: 'Single Payment Collection', icon: Receipt },
+    { id: 'multiple_due', label: 'Multiple Due Entry', icon: Coins },
     { id: 'dashboard', label: 'Financial Dashboard', icon: LayoutGrid },
     { id: 'loans', label: 'Active Loan Book', icon: FileText },
     { id: 'customers', label: 'Customer Registry', icon: Users },
-    { id: 'multiple_due', label: 'Multiple Due Entry', icon: Coins },
-    { id: 'collections', label: 'Single Payment Collection', icon: Receipt },
-    { id: 'refunds', label: 'Refunds & Reversals', icon: RotateCcw },
-    { id: 'ledger', label: 'Customer Ledger', icon: BookOpen },
-    { id: 'reports', label: 'Collections & Reports', icon: BarChart3 },
-    { id: 'autosave', label: 'Auto Save & Restore', icon: Cloud },
-    { id: 'tests', label: '24 Automated Tests', icon: ShieldCheck },
-    { id: 'settings', label: 'Settings & Licencing', icon: Settings },
+  ];
+
+  // 2. Manager & Administrator Auditing & Records
+  const managementLinks = [
+    { id: 'refunds', label: 'Refunds & Reversals', icon: RotateCcw, allowed: !isAgent, tag: 'Manager+' },
+    { id: 'ledger', label: 'Customer Ledger', icon: BookOpen, allowed: !isAgent, tag: 'Manager+' },
+    { id: 'reports', label: 'Collections & Reports', icon: BarChart3, allowed: !isAgent, tag: 'Manager+' },
+  ];
+
+  // 3. Administrator System Control
+  const adminLinks = [
+    { id: 'autosave', label: 'Auto Save & Recovery', icon: Cloud, allowed: isAdmin, tag: 'Admin' },
+    { id: 'settings', label: 'Settings & Licencing', icon: Settings, allowed: isAdmin, tag: 'Admin' },
+    { id: 'tests', label: '24 Automated Tests', icon: ShieldCheck, allowed: isAdmin, tag: 'Admin' },
   ];
 
   return (
@@ -95,7 +109,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
       />
 
       {/* Drawer Body */}
-      <div className="relative w-76 max-w-[85vw] h-full bg-[#060c18] border-r border-cyan-950/70 shadow-2xl p-4 sm:p-5 flex flex-col justify-between z-10 overflow-hidden">
+      <div className="relative w-80 max-w-[88vw] h-full bg-[#060c18] border-r border-cyan-950/70 shadow-2xl p-4 sm:p-5 flex flex-col justify-between z-10 overflow-hidden">
         
         {/* Top Header & Links */}
         <div className="flex flex-col min-h-0 flex-1">
@@ -111,7 +125,9 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
                 <span className="text-xs font-serif font-black text-white uppercase block tracking-wider">
                   Sri Sennamal Finance
                 </span>
-                <span className="text-[10px] text-slate-400">Coimbatore Central</span>
+                <span className="text-[10px] text-slate-400">
+                  {isAgent ? 'Collection Agent Mode (வசூல்)' : isManager ? 'Branch Manager Mode' : 'Admin Control'}
+                </span>
               </div>
             </div>
 
@@ -123,31 +139,139 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
             </button>
           </div>
 
-          {/* Navigation Links */}
-          <div className="mt-3 space-y-1 overflow-y-auto flex-1 pr-1">
-            {links.map((item) => {
-              const Icon = item.icon;
-              const isActive = currentTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    onSelectTab(item.id);
-                    onClose();
-                  }}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
-                    isActive
-                      ? 'bg-cyan-950/60 text-[#00e5ff] border border-cyan-500/30 font-semibold shadow-[0_0_12px_rgba(0,229,255,0.15)]'
-                      : 'text-slate-300 hover:bg-slate-900/80 hover:text-white'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-[#00e5ff]' : 'text-slate-400'}`} />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
+          {/* Navigation Links Grouped by Permissions */}
+          <div className="mt-3 space-y-3 overflow-y-auto flex-1 pr-1">
+            
+            {/* Section 1: Field Operations & Collections Desk */}
+            <div>
+              <span className="text-[9.5px] font-mono uppercase tracking-wider text-cyan-400/90 font-bold px-2 block mb-1">
+                Field Operations (களப்பணி & வசூல்)
+              </span>
+              <div className="space-y-1">
+                {coreLinks.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = currentTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        onSelectTab(item.id);
+                        onClose();
+                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
+                        isActive
+                          ? 'bg-cyan-950/60 text-[#00e5ff] border border-cyan-500/30 font-semibold shadow-[0_0_12px_rgba(0,229,255,0.15)]'
+                          : 'text-slate-300 hover:bg-slate-900/80 hover:text-white'
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-[#00e5ff]' : 'text-slate-400'}`} />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-            {onOpenClearData && (
+            {/* Section 2: Management & Financial Audits */}
+            <div>
+              <span className="text-[9.5px] font-mono uppercase tracking-wider text-amber-400/90 font-bold px-2 block mb-1">
+                Management & Records (மேலாண்மை)
+              </span>
+              <div className="space-y-1">
+                {managementLinks.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = currentTab === item.id;
+                  if (!item.allowed) {
+                    return (
+                      <div
+                        key={item.id}
+                        className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs text-slate-500 bg-slate-950/30 border border-slate-900/80 cursor-not-allowed opacity-60"
+                        title="Restricted: Requires Manager or Administrator account"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Lock className="w-3.5 h-3.5 text-slate-500" />
+                          <span>{item.label}</span>
+                        </div>
+                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">
+                          {item.tag}
+                        </span>
+                      </div>
+                    );
+                  }
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        onSelectTab(item.id);
+                        onClose();
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
+                        isActive
+                          ? 'bg-cyan-950/60 text-[#00e5ff] border border-cyan-500/30 font-semibold shadow-[0_0_12px_rgba(0,229,255,0.15)]'
+                          : 'text-slate-300 hover:bg-slate-900/80 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className={`w-4 h-4 ${isActive ? 'text-[#00e5ff]' : 'text-slate-400'}`} />
+                        <span>{item.label}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Section 3: System Administration (Admin Only) */}
+            <div>
+              <span className="text-[9.5px] font-mono uppercase tracking-wider text-purple-400/90 font-bold px-2 block mb-1">
+                System Administration (நிர்வாகம்)
+              </span>
+              <div className="space-y-1">
+                {adminLinks.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = currentTab === item.id;
+                  if (!item.allowed) {
+                    return (
+                      <div
+                        key={item.id}
+                        className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs text-slate-500 bg-slate-950/30 border border-slate-900/80 cursor-not-allowed opacity-60"
+                        title="Restricted: Requires Administrator account"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Lock className="w-3.5 h-3.5 text-slate-500" />
+                          <span>{item.label}</span>
+                        </div>
+                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-purple-950/60 text-purple-300 border border-purple-800/40">
+                          Admin Only
+                        </span>
+                      </div>
+                    );
+                  }
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        onSelectTab(item.id);
+                        onClose();
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
+                        isActive
+                          ? 'bg-cyan-950/60 text-[#00e5ff] border border-cyan-500/30 font-semibold shadow-[0_0_12px_rgba(0,229,255,0.15)]'
+                          : 'text-slate-300 hover:bg-slate-900/80 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className={`w-4 h-4 ${isActive ? 'text-[#00e5ff]' : 'text-slate-400'}`} />
+                        <span>{item.label}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Clear Database (Strictly Admin Only) */}
+            {onOpenClearData && isAdmin && (
               <div className="pt-2 border-t border-slate-800/80 mt-2">
                 <button
                   onClick={() => {

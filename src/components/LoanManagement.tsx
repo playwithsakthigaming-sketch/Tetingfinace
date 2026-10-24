@@ -44,6 +44,7 @@ interface LoanManagementProps {
   onOpenPayment: (loanId: string) => void;
   onOpenMultipleDue: (loanId: string) => void;
   onOpenPassbookInApp: (tokenStr: string) => void;
+  canCreateLoan?: boolean;
 }
 
 export const LoanManagement: React.FC<LoanManagementProps> = ({
@@ -54,6 +55,7 @@ export const LoanManagement: React.FC<LoanManagementProps> = ({
   onOpenPayment,
   onOpenMultipleDue,
   onOpenPassbookInApp,
+  canCreateLoan = true,
 }) => {
   const [filterType, setFilterType] = useState<'all' | 'active' | 'overdue' | 'completed' | 'sp' | 'daily'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -162,16 +164,22 @@ export const LoanManagement: React.FC<LoanManagementProps> = ({
               className="pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 w-56 sm:w-64"
             />
           </div>
-          <button
-            onClick={() => {
-              setFormError(null);
-              setIsNewLoanOpen(true);
-            }}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-black bg-cyan-400 hover:bg-cyan-300 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-colors whitespace-nowrap"
-          >
-            <Plus className="w-4 h-4" />
-            Issue New Loan
-          </button>
+          {canCreateLoan ? (
+            <button
+              onClick={() => {
+                setFormError(null);
+                setIsNewLoanOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-black bg-cyan-400 hover:bg-cyan-300 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-colors whitespace-nowrap cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              Issue New Loan
+            </button>
+          ) : (
+            <span className="text-[10px] text-cyan-300 font-mono px-2.5 py-1.5 rounded-lg bg-cyan-950/60 border border-cyan-800/50 whitespace-nowrap">
+              Agent Balance Look-up
+            </span>
+          )}
         </div>
       </div>
 
